@@ -141,6 +141,22 @@ input{font:inherit; color:inherit}
 .sctl{position:absolute; right:12px; bottom:10px; display:flex; gap:6px; align-items:center; pointer-events:auto; font-family:var(--mono); font-size:11px; color:var(--mute)}
 .sctl .btn{background:rgba(8,17,30,.72); backdrop-filter:blur(8px); height:26px; padding:0 8px; font-size:11.5px}
 .chat{flex:1; min-height:0; display:flex; flex-direction:column; border-top:1px solid var(--line)}
+/* ---------- 全屏模式 + 弹幕 ---------- */
+.stage.fs{position:fixed; inset:0; height:auto !important; min-height:0; z-index:40}
+.dm{position:absolute; inset:0; pointer-events:none; overflow:hidden; z-index:2; display:none}
+.stage.fs .dm{display:block}
+.dmi{position:absolute; left:100%; white-space:nowrap; font-size:22px; font-weight:600; color:#fff; text-shadow:0 0 2px #000,0 1px 3px #000,0 0 10px rgba(0,0,0,.6); will-change:transform; animation:dmfly linear forwards}
+.dmi.ev{font-family:var(--mono); font-size:19px; padding:2px 10px; border-radius:14px; background:rgba(5,8,14,.55); border:1px solid var(--dmc); color:var(--dmc); text-shadow:0 0 8px var(--dmc)}
+.dmi.big{font-size:28px}
+.dmi.mine{padding:1px 8px; border:1.5px solid #fff; border-radius:6px}
+.dmi .amt{margin-left:8px; color:#fff}
+@keyframes dmfly{to{transform:translateX(calc(-100vw - 100% - 40px))}}
+.fsbar{position:absolute; left:50%; bottom:16px; transform:translateX(-50%); display:none; gap:8px; z-index:3; pointer-events:auto}
+.stage.fs .fsbar{display:flex}
+.fsbar input{width:min(420px,60vw); height:38px; background:rgba(8,17,30,.72); border:1px solid var(--line2); border-radius:19px; padding:0 16px; color:var(--ink); backdrop-filter:blur(8px)}
+.fsbar .btn{height:38px; border-radius:19px}
+.stage.fs .sctl{bottom:70px}
+@media (prefers-reduced-motion:reduce){ .dmi{animation-duration:0s !important} }
 .pin{display:flex; align-items:center; gap:10px; padding:8px 14px; border-bottom:1px solid var(--line); background:var(--bg2); font-size:12.5px}
 .pin .ic{width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,var(--cyan),var(--violet) 60%,var(--ant)); box-shadow:0 0 12px rgba(194,28,255,.45)}
 .pin .t{flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
@@ -454,7 +470,9 @@ function renderRoom(r) {
     <div class="stage" id="stage">
       <div class="labels" id="labels"></div>
       <div class="sovl" id="chips"></div>
-      <div class="sovr"><button class="btn sm" id="bHand">✋ 举手</button><button class="btn sm" id="bMic">🎤 用麦克风</button></div>
+      <div class="dm" id="dm"></div>
+      <div class="sovr"><button class="btn sm" id="bHand">✋ 举手</button><button class="btn sm" id="bMic">🎤 用麦克风</button><button class="btn sm" id="bFs" aria-pressed="false" title="全屏（F）">⛶ 全屏</button></div>
+      <div class="fsbar"><input id="saydm" placeholder="发条弹幕…" aria-label="发弹幕" maxlength="60"><button class="btn pri" id="bSendDm">发送</button></div>
       <div class="sctl"><span id="sN"></span><button class="btn" id="bOrbit" aria-pressed="true">环绕</button><button class="btn" id="bPromote">让举手者上麦</button></div>
     </div>
     <div class="chat">
@@ -474,6 +492,9 @@ function renderRoom(r) {
   $('#bOrbit').addEventListener('click', e => { const on = e.currentTarget.getAttribute('aria-pressed') !== 'true'; e.currentTarget.setAttribute('aria-pressed', on); field.autoOrbit = on; });
   const say = $('#say'); const send = () => { const v = say.value.trim(); if (!v) return; chat('msg', 'You', v, true); say.value = ''; };
   $('#bSend').addEventListener('click', send); say.addEventListener('keydown', e => { if (e.key === 'Enter') send(); });
+  const sayDm = $('#saydm'), sendDm = () => { const v = sayDm.value.trim(); if (!v) return; chat('msg', 'You', v, true); sayDm.value = ''; };
+  $('#bSendDm').addEventListener('click', sendDm); sayDm.addEventListener('keydown', e => { if (e.key === 'Enter') sendDm(); if (e.key === 'Escape') { sayDm.blur(); setFullscreen(false); } e.stopPropagation(); });
+  $('#bFs').addEventListener('click', () => setFullscreen(!isFs()));
   field.mount($('#stage'), $('#labels'), $('#chips'), r);
   chat('sys', '', `已进入房间 · 绑定 ${r.coin} · 说话不计分，插着说宝石才计分`);
   clearInterval(roomHeadTimer);
@@ -481,11 +502,39 @@ function renderRoom(r) {
   tick(); roomHeadTimer = setInterval(tick, 1000);
 }
 function enterRoom(r) { state.room = r; if (state.mode !== 'social') setMode('social'); else { renderRoom(r); renderRight(); renderLeft(); } }
-function leaveRoom() { state.room = null; field.unmount(); clearInterval(roomHeadTimer); renderLobby(); renderRight(); renderLeft(); }
+function leaveRoom() { setFullscreen(false); state.room = null; field.unmount(); clearInterval(roomHeadTimer); renderLobby(); renderRight(); renderLeft(); }
 
 // chat
 const evColor = { buy: 'var(--buy)', sell: 'var(--sell)', game: 'var(--hand)', hand: 'var(--hand)', sys: 'var(--mute)' };
+// ============ 全屏模式 + 弹幕 ============
+// 全屏：舞台铺满窗口（CSS），能用时同时请求浏览器真全屏；全屏下聊天流改为从右往左飘的弹幕
+const isFs = () => { const st = $('#stage'); return !!(st && st.classList.contains('fs')); };
+function setFullscreen(on) {
+  const st = $('#stage'); if (!st || on === isFs()) return; st.classList.toggle('fs', on); const b = $('#bFs'); if (b) { b.setAttribute('aria-pressed', on); b.textContent = on ? '✕ 退出全屏' : '⛶ 全屏'; }
+  try { if (on && document.documentElement.requestFullscreen && !document.fullscreenElement) document.documentElement.requestFullscreen().catch(() => {}); else if (!on && document.fullscreenElement) document.exitFullscreen().catch(() => {}); } catch (e) {}
+  if (!on) { const dm = $('#dm'); if (dm) dm.innerHTML = ''; dmLanes.fill(0); }
+}
+document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement && isFs()) setFullscreen(false); });   // 浏览器 Esc 退出真全屏时同步
+const dmLanes = new Array(16).fill(0);                              // 每条弹道下次可用的时间戳（ms）
+const plain = h => { const d = document.createElement('div'); d.innerHTML = h; return d.textContent; };
+function danmaku(kind, who, text, mine) {
+  const dm = $('#dm'); if (!dm || !isFs() || kind === 'sys') return;
+  if (dm.childElementCount > 60) return;                            // 同屏上限，防止刷屏卡顿
+  if ((kind === 'buy' || kind === 'sell') && !/\$[\d.]+K/.test(text) && Math.random() < .5) return;   /* 小额成交只上一半 */
+  const H = dm.clientHeight, laneH = 40, nL = Math.max(3, Math.min(dmLanes.length, Math.floor((H*.45 - 70)/laneH))), now = performance.now();
+  const ev = kind !== 'msg', amtM = /\$[\d.,]+K?/.exec(plain(text)), big = ev && amtM && /K/.test(amtM[0]) && parseFloat(amtM[0].slice(1)) >= 2, span = big ? 2 : 1;   /* 大单字大，占两条弹道 */
+  let lane = -1; for (let i = 0; i + span <= nL; i++) if (dmLanes[i] <= now && (span < 2 || dmLanes[i + 1] <= now)) { lane = i; break; } if (lane < 0) return;   // 无空弹道就丢弃（真实弹幕产品的做法）
+  const it = document.createElement('div');
+  it.className = 'dmi' + (ev ? ' ev' : '') + (big ? ' big' : '') + (mine ? ' mine' : '');
+  if (ev) { it.style.setProperty('--dmc', ({ buy: '#2BF0FF', sell: '#FF2A3A', game: '#FFD23F', hand: '#FFD23F' })[kind] || '#FF2BD6'); const t = plain(text); it.textContent = `${who} ${t}`; }
+  else it.textContent = mine ? plain(text) : `${who}：${plain(text)}`;
+  it.style.top = (70 + lane*laneH + (span - 1)*laneH*.35) + 'px'; it.style.animationPlayState = 'paused'; dm.appendChild(it);
+  const W = dm.clientWidth, w = it.offsetWidth, SPEED = 170, dur = (W + w + 40)/SPEED;   // 全部匀速：同一弹道不会追尾
+  it.style.animationDuration = dur + 's'; it.style.animationPlayState = 'running'; dmLanes[lane] = now + (w + 50)/SPEED*1000; if (span > 1) dmLanes[lane + 1] = dmLanes[lane];   // 尾巴离开右边缘后弹道才空出来
+  it.addEventListener('animationend', () => it.remove());
+}
 function chat(kind, who, text, mine = false) {
+  danmaku(kind, who, text, mine);
   if (!chatEl) return;
   let m;
   if (kind === 'msg') m = el('div', 'm', `<span class="av" style="--g:${PH(mine ? 'shaun' : who)}"></span><div><span class="who">${who}</span>${text}</div>`);
@@ -1794,7 +1843,7 @@ function loop(now) {
 }
 
 // keys
-window.addEventListener('keydown', e => { if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return; const k = e.key.toLowerCase(); if (!state.room) return; if (k === 'b') { field.tradeEvent('buy'); chat('buy', 'You', `买入 ${state.room.coin} <span class="amt">${fmt$(rnd(20, 300))}</span>`); } if (k === 's') { field.tradeEvent('sell'); chat('sell', 'You', `卖出 ${state.room.coin} <span class="amt">${fmt$(rnd(20, 300))}</span>`); } if (k === 'c') { const cs = field.cities, cur = field.traits ? field.traits.city : 'hk', nx = cs[(cs.indexOf(cur) + 1) % cs.length]; field.setRoomInfo({ city: nx }); field.playIntro(); toast('城市：' + field.traits.cityName); } if (k === 'i') field.playIntro(); if (k === 'p') { toast('大屏：' + (field.setPosterStyle(field.posterStyle === 'silhouette' ? 'sport' : 'silhouette') === 'silhouette' ? '少女剪影' : '运动海报')); } if (k === 'g') { field.tradeEvent('buy', true); chat('buy', 'You', `买入 ${state.room.coin} <span class="amt">${fmt$(rnd(2000, 9000))}</span>`); } });
+window.addEventListener('keydown', e => { if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return; const k = e.key.toLowerCase(); if (!state.room) return; if (k === 'f') { setFullscreen(!isFs()); return; } if (e.key === 'Escape' && isFs()) { setFullscreen(false); return; } if (k === 'b') { field.tradeEvent('buy'); chat('buy', 'You', `买入 ${state.room.coin} <span class="amt">${fmt$(rnd(20, 300))}</span>`); } if (k === 's') { field.tradeEvent('sell'); chat('sell', 'You', `卖出 ${state.room.coin} <span class="amt">${fmt$(rnd(20, 300))}</span>`); } if (k === 'c') { const cs = field.cities, cur = field.traits ? field.traits.city : 'hk', nx = cs[(cs.indexOf(cur) + 1) % cs.length]; field.setRoomInfo({ city: nx }); field.playIntro(); toast('城市：' + field.traits.cityName); } if (k === 'i') field.playIntro(); if (k === 'p') { toast('大屏：' + (field.setPosterStyle(field.posterStyle === 'silhouette' ? 'sport' : 'silhouette') === 'silhouette' ? '少女剪影' : '运动海报')); } if (k === 'g') { field.tradeEvent('buy', true); chat('buy', 'You', `买入 ${state.room.coin} <span class="amt">${fmt$(rnd(2000, 9000))}</span>`); } });
 
 // boot
 $('.avatar').style.background = PH('shaun');
