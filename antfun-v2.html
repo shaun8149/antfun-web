@@ -1073,11 +1073,12 @@ const field = (() => {
     if (r() < .35) set(5, 15, '#FFD23F');                                                             // 耳环
     return { px, bg: PUNK_BG[(r()*PUNK_BG.length)|0], id: (r()*10000)|0 };
   }
+  function hashPunk() { const h = newHash(), pk = makePunk(mulberry32(fnv1a(h))); pk.hash = h; return pk; }   /* 每张头像各有自己的 hash */
   function drawPunks() {
     const { g, t } = punkScr; g.fillStyle = '#03070f'; g.fillRect(0, 0, 512, 512);
     punks.forEach((pk, i) => { const ox = 12 + (i % 2)*250, oy = 12 + Math.floor(i/2)*250; g.fillStyle = pk.bg; g.fillRect(ox, oy, 238, 238);
       for (let y = 0; y < 24; y++) for (let x = 0; x < 24; x++) if (pk.px[y][x]) { g.fillStyle = pk.px[y][x]; g.fillRect(ox + 7 + x*9.5, oy + 6 + y*9.5, 9.6, 9.6); }
-      g.fillStyle = 'rgba(0,0,0,.55)'; g.fillRect(ox, oy + 210, 74, 28); neon(g, '#' + pk.id, ox + 8, oy + 224, 18, '#E6F1F7', { tube: false, align: 'left', weight: 600 }); });
+      const lab = pk.hash ? shortHash(pk.hash) : '#' + pk.id; g.fillStyle = 'rgba(0,0,0,.55)'; g.fillRect(ox, oy + 210, 14 + lab.length*9.6, 28); neon(g, lab, ox + 8, oy + 224, 16, '#E6F1F7', { tube: false, align: 'left', weight: 600 }); });
     scan(g, 512, 512); t.needsUpdate = true;
   }
   // 10) 城市艺术巨幕：香港/上海 = Fidenza 风格流场；东京 = 浮世绘；纽约/首尔 = Ringers 风格钉绳（均为自写算法，币名做种子，每个币一张）
@@ -1164,7 +1165,17 @@ const field = (() => {
   }
   function stepSquiggleRig(t) { if (!sqOn) return; sqTubeMat.uniforms.uTime.value = t; sqTubeMat.uniforms.uGain.value = .85 + .2*syncR; }
   function hideSquiggleRig() { sqOn = false; sqRig.visible = false; }
-  function drawArtWall(r) { hideSquiggleRig(); const c = traits.city; sq = null; if (c === 'tokyo') drawUkiyoe(r); else if (RINGER_PAL[c]) drawRingers(r, RINGER_PAL[c]); else drawFlow(r); if (c === 'sh') buildSquiggleRig(mulberry32(fnv1a(traits.token + '#squiggle'))); }
+  // 生成艺术按 hash 生成（Art Blocks 式）：每次进房、以及每隔 ART_PERIOD 秒，都换一个新 hash 重新生成；hash 印在画面右下角。研发可用 setArtHash 传入链上 hash
+  const newHash = () => '0x' + Array.from(crypto.getRandomValues(new Uint8Array(32)), b => b.toString(16).padStart(2, '0')).join('');
+  const shortHash = h => h.slice(0, 6) + '…' + h.slice(-4);
+  const ART_PERIOD = 45; let artHash = '', sqHash = '', artT = ART_PERIOD;
+  function stampHash(g, W, H, hash) { g.save(); g.font = `600 18px "IBM Plex Mono",monospace`; const txt = shortHash(hash), w = g.measureText(txt).width + 16;
+    g.fillStyle = 'rgba(20,16,12,.78)'; g.fillRect(W - w - 14, H - 40, w, 28); g.fillStyle = '#EFE6D3'; g.textBaseline = 'middle'; g.fillText(txt, W - w - 6, H - 26); g.restore(); }
+  function drawArtCanvas(hash) { artHash = hash; const r = mulberry32(fnv1a(hash)), c = traits.city;
+    if (c === 'tokyo') drawUkiyoe(r); else if (RINGER_PAL[c]) drawRingers(r, RINGER_PAL[c]); else drawFlow(r);
+    stampHash(flowScr.g, 640, 800, hash); flowScr.t.needsUpdate = true; }
+  function drawArtWall() { hideSquiggleRig(); sq = null; drawArtCanvas(newHash()); artT = ART_PERIOD;
+    if (traits.city === 'sh') { sqHash = newHash(); buildSquiggleRig(mulberry32(fnv1a(sqHash))); } }
   const flowScr = cnv(640, 800), flowMat = scrMat(flowScr.t);
   const FLOW_PAL = [['#D9442F', 18], ['#F2B33D', 16], ['#1F4E8C', 16], ['#2A2A2A', 12], ['#EFE9DD', 14], ['#5B8E7D', 9], ['#E58A9A', 9], ['#6FA8DC', 6]];
   function drawFlow(r) {
@@ -1337,8 +1348,8 @@ const field = (() => {
     { const b = host[4], R = Math.max(b.w, b.d)*.75, band = new THREE.Mesh(new THREE.CylinderGeometry(R, R, 3.4, 64, 1, true), tickMat);   // 5) LED 跑马灯环
       band.position.y = Math.max(8, Math.min(b.h - 4, b.h*.4)); b.grp.add(band); screens.push(band); }
     host.slice(5, 7).forEach((b, k) => { const pw = Math.max(b.w*1.15, 12), ph = pw*1.5, gm = mountPlane(b, girlMats[k], pw, ph, 0, fit(b, ph, .5)); gm.userData.base = posterStyle === 'silhouette' ? 1 : .8; gm.userData.poster = true; screens.push(gm); });   // 8) 少女剪影大屏
-    if (host[7]) { const b = host[7], pw = Math.max(b.w*1.7, 18), pr = mulberry32(fnv1a(traits.token + '#punk')); punks.length = 0; for (let i = 0; i < 4; i++) punks.push(makePunk(pr)); drawPunks(); screens.push(mountPlane(b, punkMat, pw, pw, 0, fit(b, pw, .5))); }   // 9) PUNK 屏
-    if (host[8]) { const b = host[8], isSq = false, pw = isSq ? Math.max(b.w*2.4, 28) : Math.max(b.w*1.9, 22), ph = isSq ? pw/1.5 : pw*1.25; drawArtWall(mulberry32(fnv1a(traits.token + '#flow')));   // 上海：横幅巨型 Squiggle
+    if (host[7]) { const b = host[7], pw = Math.max(b.w*1.7, 18), pr = null; punks.length = 0; for (let i = 0; i < 4; i++) punks.push(hashPunk()); drawPunks(); screens.push(mountPlane(b, punkMat, pw, pw, 0, fit(b, pw, .5))); }   // 9) PUNK 屏
+    if (host[8]) { const b = host[8], isSq = false, pw = isSq ? Math.max(b.w*2.4, 28) : Math.max(b.w*1.9, 22), ph = isSq ? pw/1.5 : pw*1.25; drawArtWall();   // 上海：横幅巨型 Squiggle
       const fm = mountPlane(b, isSq ? sqMat : flowMat, pw, ph, 0, Math.max(ph/2 + 2, Math.min(b.h - ph/2, b.h*.5))); fm.userData.base = isSq ? .9 : .58; screens.push(fm); }   // 10) 流场巨幕
     [9, 10].forEach((hi, j) => { const b = host[hi]; if (!b) return; const pw = Math.max(b.w*1.15, 12), ph = pw*1.5, gm = mountPlane(b, girlMats[2 + j], pw, ph, 0, fit(b, ph, .5)); gm.userData.base = posterStyle === 'silhouette' ? 1 : .8; gm.userData.poster = true; screens.push(gm); });   // 8b) 篮球 / 自行车海报
     [11, 12].forEach((hi, j) => { const b = host[hi]; if (!b) return; const pw = Math.max(b.w*1.15, 12), ph = pw*1.5, gm = mountPlane(b, girlMats[4 + j], pw, ph, 0, fit(b, ph, .5)); gm.userData.base = posterStyle === 'silhouette' ? 1 : .8; gm.userData.poster = true; screens.push(gm); });   // 8c) 冲浪 / 击剑海报
@@ -1556,7 +1567,9 @@ const field = (() => {
   }
   let signT = 0, spkT = 0, punkT = 4;
   const api = { autoOrbit: true, mount, unmount, tradeEvent, raiseHand, promoteHand, useMic, get talking() { return speakers.filter(s => s.talking).length; }, get hands() { return hands.length; }, get sync() { return { r: syncR, coupling, n: crowdN }; }, setRoomInfo, setProgress(p) { progExternal = true; prog = Math.max(.12, Math.min(1, +p || 0)); }, get progress() { return +progShown.toFixed(3); }, get speakerNames() { return speakers.filter(s => !s.you).map(s => s.name); }, get nameSigns() { return nameSt.map(s => s.text); },
-    get cities() { return CITY_KEYS.slice(); },
+    get cities() { return CITY_KEYS.slice(); }, get artHash() { return artHash; }, get squiggleHash() { return sqHash; },
+    setArtHash(h) { if (traits && /^0x[0-9a-f]{8,}$/i.test(h)) { drawArtCanvas(h); artT = ART_PERIOD; } },   // 研发：用链上 hash 生成巨幕
+
     setPosterStyle(st) { posterStyle = st === 'sport' ? 'sport' : 'silhouette'; screens.forEach(m => { if (m.userData.poster) m.userData.base = posterStyle === 'silhouette' ? 1 : .8; }); return posterStyle; },   // 对比测试：'silhouette' | 'sport'
     get posterStyle() { return posterStyle; },
     setAutoCamera(o) { if (typeof o === 'boolean') camOpt.auto = o; else Object.assign(camOpt, o); },   // 研发：关闭/调节点名甩镜 { auto, cooldown, idle }
@@ -1586,7 +1599,8 @@ const field = (() => {
       tokT += dt; if (tokT > 6) { tokT = 0; tokIdx++; drawCoinSign(); }   /* 购物车 token 每 6 秒轮换 */
       stepSquiggleRig(t); stepNames(dt); progShown += (prog - progShown)*Math.min(1, dt*1.5); progMat.uniforms.uP.value = progShown; progMat.uniforms.uTime.value = t;
       spkT -= dt; if (spkT <= 0) { if (curveOn) drawCurve(t); for (let k = 0; k < boardsOn; k++) drawBoard(k, t); drawSpkScreen(); for (let k = 0; k < 6; k++) drawGirl(k, t); spkT = .15; }
-      punkT -= dt; if (punkT <= 0 && punks.length) { punks[(Math.random()*4)|0] = makePunk(Math.random); drawPunks(); punkT = 4; }   /* 每 4 秒换一张头像 */
+      artT -= dt; if (artT <= 0 && traits) { drawArtCanvas(newHash()); flash.setRGB(.25, .25, .3); artT = ART_PERIOD; }   /* 巨幕每 45 秒换一幅新作 */
+      punkT -= dt; if (punkT <= 0 && punks.length) { punks[(Math.random()*4)|0] = hashPunk(); drawPunks(); punkT = 4; }   /* 每 4 秒换一张头像 */
       if (tickDirty) { drawTicker(); tickDirty = false; } tick.t.offset.x = (tick.t.offset.x + dt*.025) % 1;
       flash.multiplyScalar(Math.pow(.5, dt/.22)); cityMat.uniforms.uFlash.value.copy(flash);
       screens.forEach(m => { const k = m.userData.base || 1; m.material.color.setRGB(k*(1 + flash.r*.8), k*(1 + flash.g*.8), k*(1 + flash.b*.8)); });
