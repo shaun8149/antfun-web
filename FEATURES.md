@@ -108,15 +108,14 @@ field.unmount();
 - **加密街招**：每座城的内圈楼低层挂 3 块英文霓虹横招，分别是 WE BUY NFTs FOR CASH、CONNECT WALLET、GM / WAGMI。
 - **城市专属结构**：
   - 曼谷：楼与楼之间的下垂电缆，部分跨过广场上空，两端都挂在楼上；
-  - 东京：折线步行天桥，从一栋楼出发，在中间那栋楼前方转折，接到隔一栋的楼，带栏杆和两侧发光灯条；
   - 香港：烟花，大单买入时放一朵，平时每 20–35 秒一朵，总在镜头对面的天空炸开。
-  - 产品确认不做的：跨街灯串、步道人群、探照灯。
+  - 产品确认不做的：跨街灯串、步道人群、探照灯、东京天桥（试做后去掉）、飞行器（试做后去掉）。
 - **框景开场**：每次进房，先从一个「框」里看城市，约 1 秒后镜头穿过框推进城市（全程约 3.6 秒）。开场期间镜头从 58 推近到 30，同时继续正向环绕，遵守「不回头、不停顿」。
   - 框的样式按城市：东京、首尔、伦敦是落地窗加窗帘和湿玻璃（雨滴、水痕往下流）；纽约、上海是圆形舷窗加湿玻璃；香港、曼谷是天台栏杆。
   - 框里只有一只猫的剪影：窗台上、舷窗下沿、栏杆上。产品确认**不出现人物剪影**。
   - 主播点名推迟到开场结束后（进房约 4.6 秒）。
   - 研发接口：`field.setIntro(false)` 关闭开场，`field.playIntro()` 重播；直播间里按 `i` 键重播，按 `c` 切城市时也会自动播一次。
-- **代码位置**：`scrMat`、`bokMat`、`drawSubject`、`fishMat` / `stepAtmos`、`drawCrypto`、`wireMat` / `bridgeMat`（`layoutForms` 内）、`launchFirework` / `stepFireworks`、`drawIntroFrame` / `stepIntro`。
+- **代码位置**：`scrMat`、`bokMat`、`drawSubject`、`fishMat` / `stepAtmos`、`drawCrypto`、`wireMat`（`layoutForms` 内）、`launchFirework` / `stepFireworks`、`drawIntroFrame` / `stepIntro`。
 - **预览**：`screenshots/atmos-*.png`。
 
 ## 3. 楼上的招牌和屏幕

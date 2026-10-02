@@ -1408,8 +1408,7 @@ const field = (() => {
   function drawCrypto() { cryptoCv.forEach((cv, k) => { const { g, t } = cv, [a, b] = CRYPTO_TXT[k], col = ['#3DFF8B', '#2BF0FF', '#FFD23F'][k]; g.clearRect(0, 0, 768, 288);
     g.save(); g.shadowColor = col; g.shadowBlur = 18; g.strokeStyle = col; g.lineWidth = 6; g.strokeRect(14, 14, 740, 260); g.restore();
     neon(g, a, 384, 104, fitSize(g, a, 680, 100), col); neon(g, b, 384, 206, fitSize(g, b, 680, 72), '#EEF4FF', { tube: false, weight: 600 }); t.needsUpdate = true; }); }
-  const wireMat = new THREE.LineBasicMaterial({ color: 0x2a3448, fog: false }), railMat = new THREE.LineBasicMaterial({ color: new THREE.Color(.75, .95, 1.2), fog: false }), stripMat = new THREE.LineBasicMaterial({ color: new THREE.Color(.6, 2.6, 3.0), fog: false });
-  const bridgeGeo = new THREE.BoxGeometry(1, 1, 1), bridgeMat = new THREE.MeshBasicMaterial({ color: 0x18222f }), glowMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(.5, 2.2, 2.6) });
+  const wireMat = new THREE.LineBasicMaterial({ color: 0x2a3448, fog: false });
   // ===== 香港烟花：大单买入 + 每 20–35 秒一朵；粒子池 CPU 积分 =====
   const FW_N = 1400, fwPos = new Float32Array(FW_N*3), fwCol = new Float32Array(FW_N*3), fwLife = new Float32Array(FW_N), fwVel = new Float32Array(FW_N*3), fwMax = new Float32Array(FW_N); let fwHead = 0, fwT = 8;
   const fwGeo = new THREE.BufferGeometry(); fwGeo.setAttribute('position', new THREE.BufferAttribute(fwPos, 3)); fwGeo.setAttribute('aCol', new THREE.BufferAttribute(fwCol, 3)); fwGeo.setAttribute('aLife', new THREE.BufferAttribute(fwLife, 1));
@@ -1443,17 +1442,6 @@ const field = (() => {
       for (let k = 0; k < 9; k++) { const A = IN[(wr()*IN.length)|0], B = IN[((IN.indexOf(A) + 4 + wr()*(IN.length/2 - 4))|0) % IN.length], y1 = 18 + wr()*14, y2 = 18 + wr()*14;   // 跨广场长电缆
         cable(corner(A, wr() < .5 ? 1 : -1, Math.min(y1, A.h - 1)), corner(B, wr() < .5 ? 1 : -1, Math.min(y2, B.h - 1)), 6 + wr()*8); }
       city.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(pts), wireMat)); }
-    if (traits.city === 'tokyo') {                                                                 // 东京：相邻楼之间的步行天桥（桥面 + 栏杆 + 桥底灯带）
-      const IN = blds.filter(b => b.inner && !avoid.has(b)).sort((p2, q2) => p2.a - q2.a), br = mulberry32(fnv1a(traits.token + '#bridges')), rail = [];
-      const front = (b, y) => new THREE.Vector3(Math.cos(b.a)*(b.rad - b.d/2 - 1.2), y, Math.sin(b.a)*(b.rad - b.d/2 - 1.2));
-      const seg = (P, Q, y) => { const L = P.distanceTo(Q), mid = P.clone().lerp(Q, .5), ang = Math.atan2(Q.z - P.z, Q.x - P.x), dir = Q.clone().sub(P).normalize(), nrm = new THREE.Vector3(-dir.z, 0, dir.x);
-        const deck = new THREE.Mesh(bridgeGeo, bridgeMat); deck.position.copy(mid); deck.rotation.y = -ang; deck.scale.set(L + .6, 1.0, 3.0); city.add(deck);
-        [-1, 1].forEach(sd => { const gs = new THREE.Mesh(bridgeGeo, glowMat); gs.position.copy(mid).add(nrm.clone().multiplyScalar(sd*1.55)).setY(y - .55); gs.rotation.y = -ang; gs.scale.set(L + .6, .18, .18); city.add(gs);   // 桥两侧发光灯条
-          const o = nrm.clone().multiplyScalar(sd*1.4); rail.push(P.clone().add(o).setY(y + 1.6), Q.clone().add(o).setY(y + 1.6)); for (let k = 0; k <= L; k += 1.6) { const c = P.clone().add(dir.clone().multiplyScalar(k)).add(o); rail.push(c.clone().setY(y + .5), c.clone().setY(y + 1.6)); } }); };
-      let made = 0; for (let i = 0; i < IN.length && made < 7; i += 3) { const A = IN[i], C2 = IN[(i + 1) % IN.length], B = IN[(i + 2) % IN.length], y = 8 + br()*Math.min(A.h, B.h, 26)*.55; if (y > Math.min(A.h, B.h) - 3) continue;
-        const P = front(A, y), Q = front(B, y), rM = Math.min(A.rad - A.d/2, C2.rad - C2.d/2, B.rad - B.d/2) - 4, M = new THREE.Vector3(Math.cos(C2.a)*rM, y, Math.sin(C2.a)*rM);   // 折线：在中间那栋楼前方转折
-        if (P.distanceTo(M) > 22 || Q.distanceTo(M) > 22) continue; seg(P, M, y); seg(M, Q, y); made++; }
-      city.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(rail), railMat)); }
     drawCrypto(); F.filter(b => freeTop(b) >= 9).slice(-3).forEach((b, k) => { ensureGrp(b); const W = Math.min(b.w*.9, 9), H = W*.375; signs.push(mountPlane(b, cryptoMats[k], W, H, 0, Math.min(freeTop(b) - H/2 - .5, 4 + H/2 + 1.5), b.d/2 + .32)); });   // 加密街招
     if (C.forms.includes('stack') || C.forms.includes('bands')) drawBoxes(mulberry32(fnv1a(traits.token + '#boxes')));
     if (C.forms.includes('stack')) F.forEach(b => {                                   // 东京：杂居楼袖招牌，每层一块竖向叠放、垂直挑出
