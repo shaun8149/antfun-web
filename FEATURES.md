@@ -1,6 +1,6 @@
 # ANT.FUN 直播间 3D 声场：功能说明
 
-版本 0.25.0 · 2026-10-02 · 在线预览：https://claude.ai/artifact/L3XTD8T6XFwqjf4yzDLkTJ
+版本 0.26.0 · 2026-10-02 · 在线预览：https://claude.ai/artifact/L3XTD8T6XFwqjf4yzDLkTJ
 
 这份文档说明直播间中央那座「霓虹城市」能做什么、怎么接入、哪些地方可以调。代码都在 `antfun-v2.html` 的 `3D sound field` 段，是一个闭包，对外只暴露 `field` 对象，页面上也挂在 `window.antfunField`。
 
@@ -73,7 +73,7 @@ field.unmount();
 1. **第一层：城市原型**，决定这座城一眼能认出的身份。
 2. **第二层：城内变体**，就是上一节的配色、楼高、招牌位置这些。
 
-**城市怎么选**：用主币哈希按权重抽城市，权重是香港 30、东京 20、首尔 18、纽约 17、上海 15。研发可以用 `setRoomInfo({ city: 'hk' | 'tokyo' | 'seoul' | 'ny' | 'sh' })` 或在 room 对象里传 `city` 指定城市；传 `null` 则恢复按哈希抽。直播间里按 `c` 键可以轮换城市预览。
+**城市怎么选**：用主币哈希按权重抽城市，权重是香港 30、东京 20、首尔 18、纽约 17、上海 15、曼谷 10、伦敦 8。**注意**：增删城市或改权重，会改变所有币的城市分配。研发可以用 `setRoomInfo({ city: 'hk' | 'tokyo' | 'seoul' | 'ny' | 'sh' | 'bkk' | 'london' })` 或在 room 对象里传 `city` 指定城市；传 `null` 则恢复按哈希抽。直播间里按 `c` 键可以轮换城市预览。
 
 **每座城换的东西**：
 
@@ -84,11 +84,13 @@ field.unmount();
 | 艺术巨幕 | Fidenza 风格流场 | **浮世绘**（卷浪、富士、红日、题签、朱印，每币构图不同） | **Ringers 风格**（丹青配色） | **Ringers 风格**（红蓝黄） | Fidenza 风格，加**巨型 Squiggle 装置** |
 | 雾色 / 窗光 | 洋红雾 / 暖窗 | 灰白雾 / 冷白荧光 | 冷蓝雾 / 冷白 | 琥珀雾 / 钨丝暖 | 金色雾 / 暖窗 |
 
+- **曼谷**：泰文招牌整行旋转 90°、从上往下读（泰文的元音和声调符号不能逐字拆开竖排），一半是金边招牌；楼面挂垂坠的暖色灯串；粉橙色暖雾。
+- **伦敦**：楼高乘以 0.72（低矮街区），霓虹很少；英式街招（PUB、FISH & CHIPS、OFF LICENCE）；一面包住楼角的弧形 LED 墙（皮卡迪利式），四格广告每 5 秒轮换；冷蓝雾。
 - **本地化标签**：点名牌、房名牌、购物车标签、跑马灯都会切换成当地语言，比如东京是「発言中」、首尔是「발언 중」、纽约是「NOW SPEAKING」。
 - **上海 Squiggle 装置**：一整根发光软管从广场地面拔起，在楼群上空起伏，触地处有光池，彩虹沿管子流动，人气锁相越强越亮。上海的城市会在装置所在方向清出一片开阔广场。形状由币名决定。
 - **所有城市共有的元素**：K 线大屏、PUNK 屏、6 块少女剪影、在麦头像墙、点名牌、灯火进度条。
 - **版权**：Ringers、Fidenza、Chromie Squiggle 都只借视觉语言，代码全部自写；浮世绘不照搬原作；店名全部虚构。
-- **字体**：Noto Sans TC / JP / KR 按需加载，加载完成后自动重画文字（`ensureCityFont`）。
+- **字体**：Noto Sans TC / JP / KR / Thai 按需加载，加载完成后自动重画文字（`ensureCityFont`）。
 - **代码位置**：城市表 `CITIES`，招牌形制 `layoutForms`，楼形附加体在 `buildCity` 末尾，艺术巨幕 `drawArtWall`，Squiggle 装置 `buildSquiggleRig`。
 - **预览**：`screenshots/city-*.png`、`screenshots/art-*.png`。
 

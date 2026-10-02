@@ -2,7 +2,7 @@
 <title>ANT.FUN 情绪声场</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Noto+Sans+TC:wght@700&family=Noto+Sans+JP:wght@700&family=Noto+Sans+KR:wght@700&family=Chakra+Petch:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Noto+Sans+TC:wght@700&family=Noto+Sans+JP:wght@700&family=Noto+Sans+KR:wght@700&family=Noto+Sans+Thai:wght@700&family=Chakra+Petch:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
 <style>
@@ -697,6 +697,19 @@ const field = (() => {
       roof: ['金城大酒店', '申江饭店', '和兴百货', '海上书局', '东亚大楼'],
       zh: { BTC: '比特币', ETH: '以太坊', SOL: 'SOLANA', DOGE: '狗狗币', USDT: '泰达币' },
       L: { newOn: '新上麦 NEW', speaking: '发言中', onMic: '在麦', relay: '上麦', room: 'LIVE ROOM · 直播间', cart: '购物车', listen: 'LISTENING' } },
+    bkk: { name: '曼谷', w: 10, haze: [.3, .12, .14], font: '"Noto Sans Thai"', win: [1, .74, .45], edge: [.3, .6], hang: .55, forms: ['lights'], adWord: 'ร้านทอง', vRot: true, gold: .5,
+      schemes: [['金×粉', ['#FFC857', '#FF5FA2']], ['橙×青', ['#FF8A1F', '#2BF0FF']], ['金×红', ['#FFC857', '#FF2A3A']]],
+      pal: [['#FFC857', 24], ['#FF5FA2', 16], ['#FF8A1F', 14], ['#FF2A3A', 12], ['#2BF0FF', 10], ['#3DFF8B', 10], ['#EEF4FF', 8], ['#C21CFF', 6]],
+      vs: ['ร้านทอง', 'นวดแผนไทย', 'ก๋วยเตี๋ยว', 'ข้าวมันไก่', 'ร้านยา', 'โรงแรม', 'คาราโอเกะ', 'ส้มตำ', 'ตลาดนัด', 'สุขุมวิท', 'สีลม', 'เยาวราช', 'แลกเงิน', 'ชาไทย', 'ผัดไทย', 'มวยไทย', 'ข้าวต้ม', 'ร้านตัดผม', 'สปา', 'บาร์', 'HOTEL', 'MASSAGE', 'GOLD', 'BAR', ...LOGOS],
+      zh: { BTC: 'BTC', ETH: 'ETH', SOL: 'SOL', DOGE: 'DOGE', USDT: 'USDT' },
+      L: { newOn: 'ขึ้นไมค์ NEW', speaking: 'กำลังพูด', onMic: 'บนไมค์', relay: 'ขึ้นไมค์', room: 'LIVE ROOM · ไลฟ์สด', cart: 'ตะกร้า', listen: 'ผู้ฟัง' } },
+    london: { name: '倫敦', w: 8, haze: [.08, .12, .2], font: '"Chakra Petch"', win: [1, .78, .52], edge: [.03, .12], hang: .5, hMul: .72, forms: ['curve'], adWord: 'PUB',
+      schemes: [['钠黄×红', ['#FFB347', '#E32B2B']], ['冷白×蓝', ['#EEF4FF', '#2B6CFF']], ['金×绿', ['#FFD23F', '#2E8B57']]],
+      pal: [['#FFB347', 24], ['#E32B2B', 18], ['#EEF4FF', 16], ['#2B6CFF', 12], ['#FFD23F', 12], ['#2E8B57', 10], ['#FF2BD6', 4], ['#2BF0FF', 4]],
+      vs: ['PUB', 'FISH & CHIPS', 'OFF LICENCE', 'THEATRE', 'KEBAB', 'BOOKMAKER', 'CHEMIST', 'TAILOR', 'CURRY', 'NEWSAGENT', 'BAKERY', 'HOTEL', 'GIN', 'ALE', 'SOHO', 'CAMDEN', 'BRIXTON', 'OPEN', 'CAFE', 'CINEMA', 'LAUNDRY', 'BARBER', 'OYSTERS', 'TEA', ...LOGOS],
+      curve: [['THE NEON HEIST', '#E32B2B'], ['$TOKEN · LIVE', '#2B6CFF'], ['WEST END TONIGHT', '#FFD23F'], ['GM LONDON', '#2E8B57'], ['TEA & CRYPTO', '#FF2BD6'], ['MIND THE PUMP', '#FFB347']],
+      zh: { BTC: 'BTC', ETH: 'ETH', SOL: 'SOL', DOGE: 'DOGE', USDT: 'USDT' },
+      L: { newOn: 'ON STAGE NOW', speaking: 'SPEAKING', onMic: 'ON MIC', relay: 'ON STAGE', room: 'LIVE ROOM · ON AIR', cart: 'BASKET', listen: 'LISTENING' } },
   };
   const CITY_KEYS = Object.keys(CITIES);
   let SIGN_PAL = CITIES.hk.pal;
@@ -754,7 +767,7 @@ const field = (() => {
   const HEIGHTS = { '中央商务区': [r => 18 + Math.pow(r, 1.5)*46, r => 34 + Math.pow(r, 1.3)*80], '中层街区': [r => 14 + r*26, r => 22 + r*34], '尖塔群': [r => 16 + Math.pow(r, 3)*72, r => 30 + Math.pow(r, 3)*130] };
   function buildCity(tr) {
     cityMat.uniforms.uWin.value.setRGB(...tr.C.win); uHaze.value.setRGB(...tr.C.haze); scene.fog.color.setRGB(tr.C.haze[0]*.25, tr.C.haze[1]*.25, tr.C.haze[2]*.25 + .03);   /* 窗光色温随城市：东京/首尔冷白荧光，纽约钨丝暖黄 */
-    const r = tr.rng, [hIn, hOut] = HEIGHTS[tr.skyline], neon = tr.neon.map(c => new THREE.Color(c)), m = new THREE.Matrix4(), q = new THREE.Quaternion(), up = new THREE.Vector3(0, 1, 0), sc = new THREE.Vector3(), ps = new THREE.Vector3();
+    const r = tr.rng, hm = tr.C.hMul || 1, [hIn0, hOut0] = HEIGHTS[tr.skyline], hIn = x => hIn0(x)*hm, hOut = x => hOut0(x)*hm, neon = tr.neon.map(c => new THREE.Color(c)), m = new THREE.Matrix4(), q = new THREE.Quaternion(), up = new THREE.Vector3(0, 1, 0), sc = new THREE.Vector3(), ps = new THREE.Vector3();
     blds = [];
     const ave = r()*Math.PI*2; aveAng = ave; sqAng = tr.city === 'sh' ? ave + 2.0944*((r()*3)|0) : null;   /* 上海：装置所在方向清出一片广场 */
     const sqGap = a => sqAng != null && Math.abs(Math.atan2(Math.sin(a - sqAng), Math.cos(a - sqAng))) < .62;
@@ -893,6 +906,14 @@ const field = (() => {
       if (txt[0] === '@') { const k = txt.slice(1), L = LOGO[k], zc = [...((traits ? traits.C : CITIES.hk).zh[k])], zs = Math.min(70, 330/zc.length);
         g.save(); g.beginPath(); g.rect(x0, y0, 128, 512); g.clip(); g.shadowColor = L.c; g.shadowBlur = 14; g.strokeStyle = L.c; g.lineWidth = 4; g.strokeRect(x0 + 14, y0 + 14, 100, 484); g.restore();
         drawLogo(g, k, x0 + 64, y0 + 84, 44); zc.forEach((ch, j) => neon(g, ch, x0 + 64, y0 + 310 + (j - (zc.length - 1)/2)*zs*1.05, zs*.9, L.c, { tube: false })); return; }
+      const C0 = traits ? traits.C : CITIES.hk;
+      if (C0.vRot) { g.save(); g.beginPath(); g.rect(x0, y0, 128, 512); g.clip(); const gold = r() < C0.gold;   // 泰文：整行旋转 90°（元音/声调符号不能逐字拆开）
+        if (gold) { g.fillStyle = '#1a0f06'; g.fillRect(x0 + 12, y0 + 12, 104, 488); g.shadowColor = '#FFC857'; g.shadowBlur = 16; g.strokeStyle = '#FFC857'; g.lineWidth = 6; g.strokeRect(x0 + 14, y0 + 14, 100, 484); g.lineWidth = 2; g.strokeRect(x0 + 26, y0 + 26, 76, 460); g.shadowBlur = 0; }   // 金边招牌
+        else if (box) { g.shadowColor = col; g.shadowBlur = 18; g.fillStyle = col; g.globalAlpha = .88; g.fillRect(x0 + 12, y0 + 12, 104, 488); g.globalAlpha = 1; g.shadowBlur = 0; }
+        else { g.shadowColor = col; g.shadowBlur = 14; g.strokeStyle = col; g.lineWidth = 4; g.strokeRect(x0 + 14, y0 + 14, 100, 484); g.shadowBlur = 0; }
+        g.translate(x0 + 64, y0 + 256); g.rotate(Math.PI/2);   /* 从上往下读 */ const sz = fitSize(g, txt, 420, 74);
+        if (box && !gold) { g.font = `700 ${sz}px ${FONT}`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = '#04060b'; g.fillText(txt, 0, 4); } else neon(g, txt, 0, 4, sz, gold ? '#FFC857' : col);
+        g.restore(); return; }
       g.save(); g.beginPath(); g.rect(x0, y0, 128, 512); g.clip();
       if (box) { g.shadowColor = col; g.shadowBlur = 18; g.fillStyle = col; g.globalAlpha = .88; g.fillRect(x0 + 12, y0 + 12, 104, 488); g.globalAlpha = 1; g.shadowBlur = 0;
         g.font = `700 ${size}px ${FONT}`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = '#04060b'; chars.forEach((ch, k) => g.fillText(ch, x0 + 64, y0 + 256 + (k - (chars.length - 1)/2)*size*1.05)); }
@@ -1257,12 +1278,19 @@ const field = (() => {
   const slabPlane = (k, w, h) => { const geo = new THREE.PlaneGeometry(w, h), uv = geo.attributes.uv, col = k % 4, row = Math.floor(k/4);
     for (let i = 0; i < uv.count; i++) uv.setXY(i, (col + uv.getX(i))/4, 1 - (row + 1 - uv.getY(i))/4); return geo; };
   const ensureGrp = b => { if (!b.grp) { b.grp = new THREE.Group(); b.grp.position.set(b.x, 0, b.z); b.grp.rotation.y = b.rotY; city.add(b.grp); } return b.grp; };
-  let boardsOn = 0;
+  let boardsOn = 0, curveOn = false;
+  const bulbMat = new THREE.PointsMaterial({ map: texGlow, color: new THREE.Color(1.6, 1.15, .55), size: 1.3, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, fog: false });
+  const curveCv = cnv(2048, 384), curveMat = new THREE.MeshBasicMaterial({ map: curveCv.t, side: THREE.DoubleSide, fog: false }); curveCv.t.wrapS = THREE.RepeatWrapping;
+  function drawCurve(t) { const { g, t: tex } = curveCv, L = traits.C.curve, W = 2048 / 4; g.fillStyle = '#05070b'; g.fillRect(0, 0, 2048, 384);
+    for (let k = 0; k < 4; k++) { const [txt0, col] = L[(k + Math.floor(t/5)) % L.length], txt = txt0.replace('$TOKEN', '$' + mainTok()), x = k*W;   // 四块广告每 5 秒轮换
+      const gr = g.createLinearGradient(x, 0, x + W, 384); gr.addColorStop(0, col); gr.addColorStop(1, '#05070b'); g.fillStyle = gr; g.fillRect(x + 6, 6, W - 12, 372);
+      g.font = `800 ${fitSize(g, txt, W - 60, 90)}px ${FONT}`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = '#EEF4FF'; g.fillText(txt, x + W/2, 192); }
+    scan(g, 2048, 384); tex.needsUpdate = true; }
   function layoutForms(host, avoid) {
     const C = traits.C, fr = mulberry32(fnv1a(traits.token + '#forms')), taken = new Set(host);
     const freeTop = b => Math.min(b.h - 2, b.occLow == null ? 1e9 : b.occLow - .8);                       // 可用楼层上限：正面大屏下沿以下
     const F = blds.filter(b => b.inner && b.h > 14 && !avoid.has(b)).sort(() => fr() - .5);              // 只挂内圈（镜头看得到）
-    let slot = 0; boardsOn = 0;
+    let slot = 0; boardsOn = 0; curveOn = false;
     if (C.forms.includes('stack') || C.forms.includes('bands')) drawBoxes(mulberry32(fnv1a(traits.token + '#boxes')));
     if (C.forms.includes('stack')) F.forEach(b => {                                   // 东京：杂居楼袖招牌，每层一块竖向叠放、垂直挑出
       const sides = fr() < .6 ? [1, -1] : [fr() < .5 ? 1 : -1], W = 4.4, H = 2.5; ensureGrp(b);   // 两侧各一列，每层一块
@@ -1277,6 +1305,13 @@ const field = (() => {
       const m = new THREE.Mesh(new THREE.PlaneGeometry(3.6, 7.2), crossMat); m.position.set(0, b.h + 3.9, 0); ensureGrp(b).add(m); signs.push(m); });
     if (C.forms.includes('board')) F.map(b => ({ b, W: Math.min(b.w*1.05, (freeTop(b) - 3.5)/.5625) })).filter(o => o.W >= 7).slice(0, 6).forEach(({ b, W }, k) => {   // 纽约：巨幅 LED 广告屏（大屏下方的楼层）
       const H = W*.5625; ensureGrp(b); const m = mountPlane(b, boardMats[k], W, H, 0, 3.5 + H/2, b.d/2 + .3); screens.push(m); boardsOn = k + 1; });
+    if (C.forms.includes('lights')) F.forEach(b => {                                                   // 曼谷：楼面暖色灯串（垂坠曲线，挂在楼面上）
+      const pts = [], top = Math.min(freeTop(b), 22), rows = 2 + ((fr()*3)|0); ensureGrp(b);
+      for (let k = 0; k < rows; k++) { const y = 4 + (k + 1)*(top - 4)/(rows + 1), sag = 1 + fr()*1.6; for (let j = 0; j <= 22; j++) { const u = j/22; pts.push(new THREE.Vector3((u - .5)*b.w*.94, y - sag*4*u*(1 - u), b.d/2 + .3)); } }
+      const o = new THREE.Points(new THREE.BufferGeometry().setFromPoints(pts), bulbMat); b.grp.add(o); });
+    if (C.forms.includes('curve')) { const b = blds.filter(q => q.inner && !avoid.has(q) && freeTop(q) >= 12).sort((p, q) => q.w - p.w)[0]; if (b) { ensureGrp(b);   // 伦敦：弧形 LED 墙（皮卡迪利式），包住楼角
+      const R = Math.max(b.w*1.2, 10), H = Math.min(15, freeTop(b) - 3), m = new THREE.Mesh(new THREE.CylinderGeometry(R, R, H, 48, 1, true, -.85, 1.7), curveMat);
+      m.position.set(0, 3 + H/2, b.d/2 - R*.62); b.grp.add(m); screens.push(m); curveOn = true; } }
     if (C.forms.includes('roof')) { drawRoofs(); blds.filter(b => b.h > 12 && b.h < 34 && b.rad < 100 && b !== host[0] && b !== host[13]).sort((p, q) => p.rad - q.rad).slice(0, 5).forEach((b, k) => {   // 上海屋顶大字 / 东京屋顶广告塔（矮楼，镜头看得到楼顶）
       const W = Math.max(b.w*1.4, 14), H = W*.293, m = new THREE.Mesh(new THREE.PlaneGeometry(W, H), roofMats[k]); m.position.set(0, b.h + H/2 + .3, 0); ensureGrp(b).add(m); signs.push(m); }); }
   }
@@ -1550,7 +1585,7 @@ const field = (() => {
       signT -= dt; if (signT <= 0) { drawCoinSign(); drawKScreen(); signT = .5; }
       tokT += dt; if (tokT > 6) { tokT = 0; tokIdx++; drawCoinSign(); }   /* 购物车 token 每 6 秒轮换 */
       stepSquiggleRig(t); stepNames(dt); progShown += (prog - progShown)*Math.min(1, dt*1.5); progMat.uniforms.uP.value = progShown; progMat.uniforms.uTime.value = t;
-      spkT -= dt; if (spkT <= 0) { for (let k = 0; k < boardsOn; k++) drawBoard(k, t); drawSpkScreen(); for (let k = 0; k < 6; k++) drawGirl(k, t); spkT = .15; }
+      spkT -= dt; if (spkT <= 0) { if (curveOn) drawCurve(t); for (let k = 0; k < boardsOn; k++) drawBoard(k, t); drawSpkScreen(); for (let k = 0; k < 6; k++) drawGirl(k, t); spkT = .15; }
       punkT -= dt; if (punkT <= 0 && punks.length) { punks[(Math.random()*4)|0] = makePunk(Math.random); drawPunks(); punkT = 4; }   /* 每 4 秒换一张头像 */
       if (tickDirty) { drawTicker(); tickDirty = false; } tick.t.offset.x = (tick.t.offset.x + dt*.025) % 1;
       flash.multiplyScalar(Math.pow(.5, dt/.22)); cityMat.uniforms.uFlash.value.copy(flash);
