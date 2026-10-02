@@ -4,7 +4,7 @@
 
 - 代码仓库：https://github.com/shaun8149/antfun-web
 - 在线预览：https://claude.ai/artifact/L3XTD8T6XFwqjf4yzDLkTJ （拿到链接即可打开，内容与本包一致）
-- 当前版本：0.28.0（2026-10-02）
+- 当前版本：0.29.0（2026-10-02）
 
 > 3D 声场的完整功能说明和接入方式见 **[FEATURES.md](FEATURES.md)**。
 

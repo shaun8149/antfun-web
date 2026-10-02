@@ -1395,11 +1395,52 @@ const field = (() => {
   function drawCrypto() { cryptoCv.forEach((cv, k) => { const { g, t } = cv, [a, b] = CRYPTO_TXT[k], col = ['#3DFF8B', '#2BF0FF', '#FFD23F'][k]; g.clearRect(0, 0, 768, 288);
     g.save(); g.shadowColor = col; g.shadowBlur = 18; g.strokeStyle = col; g.lineWidth = 6; g.strokeRect(14, 14, 740, 260); g.restore();
     neon(g, a, 384, 104, fitSize(g, a, 680, 100), col); neon(g, b, 384, 206, fitSize(g, b, 680, 72), '#EEF4FF', { tube: false, weight: 600 }); t.needsUpdate = true; }); }
+  const wireMat = new THREE.LineBasicMaterial({ color: 0x2a3448, fog: false }), railMat = new THREE.LineBasicMaterial({ color: new THREE.Color(.75, .95, 1.2), fog: false }), stripMat = new THREE.LineBasicMaterial({ color: new THREE.Color(.6, 2.6, 3.0), fog: false });
+  const bridgeGeo = new THREE.BoxGeometry(1, 1, 1), bridgeMat = new THREE.MeshBasicMaterial({ color: 0x18222f }), glowMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(.5, 2.2, 2.6) });
+  // ===== 香港烟花：大单买入 + 每 20–35 秒一朵；粒子池 CPU 积分 =====
+  const FW_N = 1400, fwPos = new Float32Array(FW_N*3), fwCol = new Float32Array(FW_N*3), fwLife = new Float32Array(FW_N), fwVel = new Float32Array(FW_N*3), fwMax = new Float32Array(FW_N); let fwHead = 0, fwT = 8;
+  const fwGeo = new THREE.BufferGeometry(); fwGeo.setAttribute('position', new THREE.BufferAttribute(fwPos, 3)); fwGeo.setAttribute('aCol', new THREE.BufferAttribute(fwCol, 3)); fwGeo.setAttribute('aLife', new THREE.BufferAttribute(fwLife, 1));
+  const fwMat = new THREE.ShaderMaterial({ transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false, uniforms: { uScale: { value: 400 } },
+    vertexShader: `attribute vec3 aCol; attribute float aLife; uniform float uScale; varying vec3 vC; varying float vL; void main(){ vC=aCol; vL=aLife; vec4 mv=modelViewMatrix*vec4(position,1.0); gl_PointSize=aLife>0.0?(1.0+aLife*1.6)*uScale/-mv.z:0.0; gl_Position=projectionMatrix*mv; }`,
+    fragmentShader: `varying vec3 vC; varying float vL; void main(){ float r=length(gl_PointCoord-.5); if(r>.5||vL<=0.0) discard; gl_FragColor=vec4(vC*smoothstep(.5,.0,r)*min(1.0,vL*1.6)*1.6,1.0); }` });
+  const fireworks = new THREE.Points(fwGeo, fwMat); fireworks.frustumCulled = false; scene.add(fireworks);
+  const FW_PAL = [['#FFD23F', '#FF8A1F'], ['#FF2A3A', '#FFD23F'], ['#FF2BD6', '#2BF0FF'], ['#FFF4D6', '#FFD23F'], ['#3DFF8B', '#FFD23F']];
+  function emit(p, v, c, life) { const i = fwHead; fwHead = (fwHead + 1) % FW_N; fwPos.set(p, i*3); fwVel.set(v, i*3); fwCol.set(c, i*3); fwLife[i] = fwMax[i] = life; return i; }
+  const rockets = [];
+  function launchFirework(big) { if (!traits || traits.city !== 'hk') return; const a = Math.atan2(-camera.position.z, -camera.position.x) + (Math.random() - .5)*1.4, R = 30 + Math.random()*25, x = Math.cos(a)*R, z = Math.sin(a)*R;   /* 在镜头对面的天空炸开 */
+    rockets.push({ i: emit([x, 4, z], [(Math.random() - .5)*2, 30 + Math.random()*6, (Math.random() - .5)*2], [1, .85, .6], 2), t: 1.3 + Math.random()*.3, big }); }
+  function stepFireworks(dt) {
+    if (traits && traits.city === 'hk') { fwT -= dt; if (fwT <= 0) { launchFirework(false); fwT = 20 + Math.random()*15; } }
+    for (let k = rockets.length - 1; k >= 0; k--) { const R = rockets[k]; R.t -= dt; if (R.t > 0) { if (Math.random() < .7) emit([fwPos[R.i*3], fwPos[R.i*3 + 1], fwPos[R.i*3 + 2]], [0, -1, 0], [1, .7, .4], .5); continue; }   // 尾焰
+      const p = [fwPos[R.i*3], fwPos[R.i*3 + 1], fwPos[R.i*3 + 2]], [c1, c2] = FW_PAL[(Math.random()*FW_PAL.length)|0].map(h => { const c = new THREE.Color(h); return [c.r, c.g, c.b]; }), n = R.big ? 220 : 140, sp = R.big ? 17 : 13;
+      fwLife[R.i] = 0; for (let j = 0; j < n; j++) { const th = Math.random()*Math.PI*2, ph = Math.acos(2*Math.random() - 1), s2 = sp*(.85 + Math.random()*.3); emit(p, [s2*Math.sin(ph)*Math.cos(th), s2*Math.cos(ph), s2*Math.sin(ph)*Math.sin(th)], j % 3 ? c1 : c2, 1.5 + Math.random()*.8); }
+      rockets.splice(k, 1); }
+    for (let i = 0; i < FW_N; i++) { if (fwLife[i] <= 0) continue; fwLife[i] -= dt/ (fwMax[i] || 1)*1; const j = i*3; fwVel[j + 1] -= 9*dt; fwVel[j] *= .985; fwVel[j + 1] *= .985; fwVel[j + 2] *= .985; fwPos[j] += fwVel[j]*dt; fwPos[j + 1] += fwVel[j + 1]*dt; fwPos[j + 2] += fwVel[j + 2]*dt; }
+    fwGeo.attributes.position.needsUpdate = fwGeo.attributes.aCol.needsUpdate = fwGeo.attributes.aLife.needsUpdate = true; }
   function layoutForms(host, avoid) {
     const C = traits.C, fr = mulberry32(fnv1a(traits.token + '#forms')), taken = new Set(host);
     const freeTop = b => Math.min(b.h - 2, b.occLow == null ? 1e9 : b.occLow - .8);                       // 可用楼层上限：正面大屏下沿以下
     const F = blds.filter(b => b.inner && b.h > 14 && !avoid.has(b)).sort(() => fr() - .5);              // 只挂内圈（镜头看得到）
     let slot = 0; boardsOn = 0; curveOn = false;
+    if (traits.city === 'bkk') {                                                                   // 曼谷：楼与楼之间的下垂电缆（两端都挂在楼上），部分跨过广场上空
+      const IN = blds.filter(b => b.inner).sort((p2, q2) => p2.a - q2.a), pts = [], wr = mulberry32(fnv1a(traits.token + '#wires'));
+      const corner = (b, side, y) => { const t2 = b.rotY, ox = side*b.w/2, oz = b.d/2; return new THREE.Vector3(b.x + ox*Math.cos(t2) + oz*Math.sin(t2), y, b.z - ox*Math.sin(t2) + oz*Math.cos(t2)); };
+      const cable = (A, B, sag) => { let prev = A; for (let i = 1; i <= 16; i++) { const u = i/16, P = A.clone().lerp(B, u); P.y -= sag*4*u*(1 - u); pts.push(prev, P); prev = P; } };
+      IN.forEach((b, i) => { const nb = IN[(i + 1) % IN.length], n = 2 + ((wr()*3)|0); for (let k = 0; k < n; k++) { const y = 8 + wr()*Math.min(b.h, nb.h, 30)*.7; cable(corner(b, 1, y), corner(nb, -1, y + (wr() - .5)*3), 1 + wr()*2.5); } });
+      for (let k = 0; k < 9; k++) { const A = IN[(wr()*IN.length)|0], B = IN[((IN.indexOf(A) + 4 + wr()*(IN.length/2 - 4))|0) % IN.length], y1 = 18 + wr()*14, y2 = 18 + wr()*14;   // 跨广场长电缆
+        cable(corner(A, wr() < .5 ? 1 : -1, Math.min(y1, A.h - 1)), corner(B, wr() < .5 ? 1 : -1, Math.min(y2, B.h - 1)), 6 + wr()*8); }
+      city.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(pts), wireMat)); }
+    if (traits.city === 'tokyo') {                                                                 // 东京：相邻楼之间的步行天桥（桥面 + 栏杆 + 桥底灯带）
+      const IN = blds.filter(b => b.inner && !avoid.has(b)).sort((p2, q2) => p2.a - q2.a), br = mulberry32(fnv1a(traits.token + '#bridges')), rail = [];
+      const front = (b, y) => new THREE.Vector3(Math.cos(b.a)*(b.rad - b.d/2 - 1.2), y, Math.sin(b.a)*(b.rad - b.d/2 - 1.2));
+      const seg = (P, Q, y) => { const L = P.distanceTo(Q), mid = P.clone().lerp(Q, .5), ang = Math.atan2(Q.z - P.z, Q.x - P.x), dir = Q.clone().sub(P).normalize(), nrm = new THREE.Vector3(-dir.z, 0, dir.x);
+        const deck = new THREE.Mesh(bridgeGeo, bridgeMat); deck.position.copy(mid); deck.rotation.y = -ang; deck.scale.set(L + .6, 1.0, 3.0); city.add(deck);
+        [-1, 1].forEach(sd => { const gs = new THREE.Mesh(bridgeGeo, glowMat); gs.position.copy(mid).add(nrm.clone().multiplyScalar(sd*1.55)).setY(y - .55); gs.rotation.y = -ang; gs.scale.set(L + .6, .18, .18); city.add(gs);   // 桥两侧发光灯条
+          const o = nrm.clone().multiplyScalar(sd*1.4); rail.push(P.clone().add(o).setY(y + 1.6), Q.clone().add(o).setY(y + 1.6)); for (let k = 0; k <= L; k += 1.6) { const c = P.clone().add(dir.clone().multiplyScalar(k)).add(o); rail.push(c.clone().setY(y + .5), c.clone().setY(y + 1.6)); } }); };
+      let made = 0; for (let i = 0; i < IN.length && made < 7; i += 3) { const A = IN[i], C2 = IN[(i + 1) % IN.length], B = IN[(i + 2) % IN.length], y = 8 + br()*Math.min(A.h, B.h, 26)*.55; if (y > Math.min(A.h, B.h) - 3) continue;
+        const P = front(A, y), Q = front(B, y), rM = Math.min(A.rad - A.d/2, C2.rad - C2.d/2, B.rad - B.d/2) - 4, M = new THREE.Vector3(Math.cos(C2.a)*rM, y, Math.sin(C2.a)*rM);   // 折线：在中间那栋楼前方转折
+        if (P.distanceTo(M) > 22 || Q.distanceTo(M) > 22) continue; seg(P, M, y); seg(M, Q, y); made++; }
+      city.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(rail), railMat)); }
     drawCrypto(); F.filter(b => freeTop(b) >= 9).slice(-3).forEach((b, k) => { ensureGrp(b); const W = Math.min(b.w*.9, 9), H = W*.375; signs.push(mountPlane(b, cryptoMats[k], W, H, 0, Math.min(freeTop(b) - H/2 - .5, 4 + H/2 + 1.5), b.d/2 + .32)); });   // 加密街招
     if (C.forms.includes('stack') || C.forms.includes('bands')) drawBoxes(mulberry32(fnv1a(traits.token + '#boxes')));
     if (C.forms.includes('stack')) F.forEach(b => {                                   // 东京：杂居楼袖招牌，每层一块竖向叠放、垂直挑出
@@ -1613,7 +1654,7 @@ const field = (() => {
     const tg = new THREE.BufferGeometry(); tg.setAttribute('position', new THREE.BufferAttribute(tp,3));
     const trail = new THREE.Line(tg, new THREE.LineBasicMaterial({ color, transparent: true, opacity: big ? .9 : .6, blending: THREE.AdditiveBlending, depthWrite: false }));
     scene.add(head, trail); comets.push({ big, color, from, to, apex, t: 0, dur: big ? 2.2 : 1.6, head, trail, tp });
-    if (big) bokMat.uniforms.uBoost.value = 1;   /* 大单：一阵光点上升 */
+    if (big) { bokMat.uniforms.uBoost.value = 1; if (kind === 'buy') launchFirework(true); }   /* 大单：一阵光点上升；香港放烟花 */
     if (kind === 'buy') flash.copy(COL.buy).multiplyScalar(big ? .9 : .35); else { flash.copy(COL.sell).multiplyScalar(big ? .6 : .25); glitch = big ? .7 : .35; }
     if (!progExternal) prog = Math.max(.12, Math.min(1, prog + (kind === 'buy' ? (amount ? amount/90000 : big ? .05 : .004) : -(amount ? amount/200000 : .002))));   /* 买入推高楼层，卖出小幅回落 */
     const coin = mainTok();
@@ -1649,14 +1690,47 @@ const field = (() => {
   dom.addEventListener('wheel', e => { camTargetDist = Math.max(14, Math.min(36, camTargetDist*(1 + Math.sign(e.deltaY)*.08))); }, { passive: true });
   // mount / unmount
   let ro = null;
-  function resize() { if (!stageEl) return; const w = stageEl.clientWidth, h = stageEl.clientHeight; if (!w || !h) return; renderer.setSize(w, h, false); camera.aspect = w/h; camera.updateProjectionMatrix(); bokMat.uniforms.uScale.value = fishMat.uniforms.uScale.value = h*.9; resizeRT(); }
+  function resize() { if (!stageEl) return; const w = stageEl.clientWidth, h = stageEl.clientHeight; if (!w || !h) return; renderer.setSize(w, h, false); camera.aspect = w/h; camera.updateProjectionMatrix(); bokMat.uniforms.uScale.value = fishMat.uniforms.uScale.value = fwMat.uniforms.uScale.value = h*.9; sizeIntro(); resizeRT(); }
+  // ===== 框景开场：进房先从「框」里看城市（剪影 + 猫），约 1 秒后镜头穿过框推进城市；镜头同时由远推近、继续正向环绕 =====
+  const introCv = document.createElement('canvas'); introCv.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:1';
+  const ig = introCv.getContext('2d'), INTRO_HOLD = 1.0, INTRO_PUSH = 2.6; let introAge = 99, introOn = true, introKind = 'window', drops = [];
+  const FRAME_OF = { hk: 'rail', bkk: 'rail', tokyo: 'window', seoul: 'window', london: 'window', ny: 'porthole', sh: 'porthole' };
+  function sizeIntro() { if (!stageEl) return; const d = Math.min(devicePixelRatio, 2); introCv.width = Math.max(2, stageEl.clientWidth*d|0); introCv.height = Math.max(2, stageEl.clientHeight*d|0); }
+  function startIntro() { if (!introOn) { introAge = 99; return; } introKind = FRAME_OF[traits && traits.city] || 'window'; introAge = 0;
+    drops = Array.from({ length: 260 }, () => ({ x: Math.random(), y: Math.random(), r: .0012 + Math.pow(Math.random(), 4)*.0045, v: Math.random() < .3 ? .04 + Math.random()*.1 : 0 })); introCv.style.display = ''; }
+  const SIL = '#020307';
+  // 框景只保留猫的剪影（产品确认：不出现人物剪影）
+  function cat(g, cx, fy, h) { g.fillStyle = SIL; g.beginPath(); g.ellipse(cx, fy - h*.35, h*.22, h*.35, 0, 0, 7); g.fill(); g.beginPath(); g.arc(cx + h*.04, fy - h*.78, h*.16, 0, 7); g.fill();
+    g.beginPath(); g.moveTo(cx - h*.08, fy - h*.88); g.lineTo(cx - h*.04, fy - h*1.02); g.lineTo(cx + h*.02, fy - h*.9); g.moveTo(cx + h*.06, fy - h*.9); g.lineTo(cx + h*.13, fy - h*1.02); g.lineTo(cx + h*.17, fy - h*.86); g.fill();
+    g.strokeStyle = SIL; g.lineWidth = h*.06; g.lineCap = 'round'; g.beginPath(); g.moveTo(cx - h*.15, fy - h*.05); g.quadraticCurveTo(cx - h*.55, fy - h*.05, cx - h*.45, fy - h*.45); g.stroke(); }
+  function wetGlass(g, x0, y0, w, h, dt) { g.save(); g.fillStyle = 'rgba(60,150,170,.07)'; g.fillRect(x0, y0, w, h);
+    drops.forEach(d => { if (d.v) { d.y += d.v*dt; if (d.y > 1) { d.y = 0; d.x = Math.random(); } } const x = x0 + d.x*w, y = y0 + d.y*h, r = d.r*Math.min(w, h)*3;
+      if (d.v) { const gr = g.createLinearGradient(x, y - r*14, x, y); gr.addColorStop(0, 'rgba(200,240,255,0)'); gr.addColorStop(1, 'rgba(200,240,255,.22)'); g.fillStyle = gr; g.fillRect(x - r*.35, y - r*14, r*.7, r*14); }
+      g.fillStyle = 'rgba(210,245,255,.16)'; g.beginPath(); g.arc(x, y, r, 0, 7); g.fill(); g.fillStyle = 'rgba(255,255,255,.4)'; g.beginPath(); g.arc(x - r*.3, y - r*.3, r*.35, 0, 7); g.fill(); });
+    g.restore(); }
+  function drawIntroFrame(dt) { const W = introCv.width, H = introCv.height, g = ig; g.clearRect(0, 0, W, H);
+    const p = Math.max(0, (introAge - INTRO_HOLD)/INTRO_PUSH), e = p*p*(3 - 2*p), sc = 1 + e*e*2.4; g.save(); g.globalAlpha = 1 - Math.max(0, (p - .5)/.5);
+    const fx = W/2, fy = introKind === 'porthole' ? H*.46 : H*.42; g.translate(fx, fy); g.scale(sc, sc); g.translate(-fx, -fy);   // 以框中心为原点推进
+    g.fillStyle = '#03050a';
+    if (introKind === 'window') { const gx = W*.1, gy = H*.05, gw = W*.8, gh = H*.72; g.beginPath(); g.rect(-W, -H, W*3, H*3); g.rect(gx, gy, gw, gh); g.fill('evenodd');
+      wetGlass(g, gx, gy, gw, gh, dt); g.fillStyle = '#05070c'; [gx + gw*.33, gx + gw*.66].forEach(x => g.fillRect(x - W*.006, gy, W*.012, gh)); g.fillRect(gx, gy + gh*.3, gw, H*.012);
+      [[gx - W*.02, 1], [gx + gw + W*.02, -1]].forEach(([x, s2]) => { const gr = g.createLinearGradient(x, 0, x + s2*W*.12, 0); gr.addColorStop(0, 'rgba(10,14,22,.95)'); gr.addColorStop(1, 'rgba(10,14,22,0)'); g.fillStyle = gr; g.fillRect(Math.min(x, x + s2*W*.12), gy - H*.05, W*.12, gh + H*.1); });   // 窗帘
+      g.fillStyle = '#05070c'; g.fillRect(gx - W*.01, gy + gh - H*.01, gw + W*.02, H*.025); cat(g, gx + gw*.72, gy + gh - H*.005, H*.16); }   /* 猫坐在窗台上，衬着城市 */
+    else if (introKind === 'porthole') { const R = Math.min(W*.42, H*.44); g.beginPath(); g.rect(-W, -H, W*3, H*3); g.arc(fx, fy, R, 0, 7); g.fill('evenodd'); g.save(); g.beginPath(); g.arc(fx, fy, R, 0, 7); g.clip(); wetGlass(g, fx - R, fy - R, R*2, R*2, dt); g.restore();   /* 只在圆内 */
+      g.save(); g.strokeStyle = 'rgba(43,240,255,.35)'; g.lineWidth = H*.006; g.shadowColor = '#2BF0FF'; g.shadowBlur = 12; g.beginPath(); g.arc(fx, fy, R*1.01, 0, 7); g.stroke(); g.restore();
+      cat(g, fx + R*.38, fy + R*.86, R*.3); }   /* 猫坐在舷窗下沿 */
+    else { g.fillRect(-W, H*.8, W*3, H); g.fillStyle = '#05070c'; g.fillRect(-W, H*.62, W*3, H*.018); for (let x = W*.04; x < W; x += W*.07) g.fillRect(x, H*.62, W*.008, H*.18);   // 天台栏杆
+      cat(g, W*.6, H*.62, H*.1); }
+    g.restore(); }
+  function stepIntro(dt) { if (introAge > INTRO_HOLD + INTRO_PUSH) { if (introCv.style.display !== 'none') { ig.clearRect(0, 0, introCv.width, introCv.height); introCv.style.display = 'none'; } return; }
+    introAge += dt; drawIntroFrame(dt); }
   function mount(stage, labels, chips, room) {
     unmount(); stageEl = stage; labelsEl = labels; chipsEl = chips; roomRef = room; stage.insertBefore(dom, stage.firstChild);
     info.city = room.city || null; info.name = room.name || `${room.host} 的直播間`; info.title = room.title || ''; info.tokens = (room.tokens || [room.coin]).map(x => String(x).toUpperCase()); tokIdx = 0; annQ.length = 0; annUntil = -1; camFocus = -1; whip = null; lastWhip = -1e9; prog = progShown = .2 + .1*Math.min(1, Math.log10(room.n + 1)/4);
-    room.speakers.forEach(n => addSpeaker(n)); setupRoom(room.n); announce(room.speakers[0], 3);
-    ro = new ResizeObserver(resize); ro.observe(stage); resize(); updHandCount(); az = .6; pol = 1.38; dist = camTargetDist = 30;
+    room.speakers.forEach(n => addSpeaker(n)); setupRoom(room.n); announce(room.speakers[0], 4.6);   /* 开场结束后再点名 */
+    stage.insertBefore(introCv, dom.nextSibling); ro = new ResizeObserver(resize); ro.observe(stage); resize(); updHandCount(); az = .6; pol = 1.38; camTargetDist = 30; dist = introOn ? 58 : 30; startIntro();   /* 开场：从远处推近 */
   }
-  function unmount() { if (ro) { ro.disconnect(); ro = null; } clearSpeakers(); clearHands(); comets.forEach(c => { scene.remove(c.head, c.trail); }); comets.length = 0; bursts.forEach(b => scene.remove(b.s)); bursts.length = 0; waves.length = 0; if (dom.parentElement) dom.parentElement.removeChild(dom); stageEl = labelsEl = chipsEl = roomRef = null; }
+  function unmount() { if (ro) { ro.disconnect(); ro = null; } clearSpeakers(); clearHands(); comets.forEach(c => { scene.remove(c.head, c.trail); }); comets.length = 0; bursts.forEach(b => scene.remove(b.s)); bursts.length = 0; waves.length = 0; if (dom.parentElement) dom.parentElement.removeChild(dom); if (introCv.parentElement) introCv.parentElement.removeChild(introCv); rockets.length = 0; fwLife.fill(0); stageEl = labelsEl = chipsEl = roomRef = null; }
   // frame
   const tmpV = new THREE.Vector3();
   function project(v, e) { tmpV.copy(v).project(camera); if (tmpV.z > 1) { e.style.display = 'none'; return; } e.style.display = ''; e._x = (tmpV.x+1)/2*stageEl.clientWidth; e._y = (1-tmpV.y)/2*stageEl.clientHeight + 14; }
@@ -1667,6 +1741,7 @@ const field = (() => {
   }
   let signT = 0, spkT = 0, punkT = 4;
   const api = { autoOrbit: true, mount, unmount, tradeEvent, raiseHand, promoteHand, useMic, get talking() { return speakers.filter(s => s.talking).length; }, get hands() { return hands.length; }, get sync() { return { r: syncR, coupling, n: crowdN }; }, setRoomInfo, setProgress(p) { progExternal = true; prog = Math.max(.12, Math.min(1, +p || 0)); }, get progress() { return +progShown.toFixed(3); }, get speakerNames() { return speakers.filter(s => !s.you).map(s => s.name); }, get nameSigns() { return nameSt.map(s => s.text); },
+    setIntro(on) { introOn = !!on; }, playIntro() { if (stageEl) { introOn = true; dist = 58; startIntro(); } },   // 研发：开关 / 重播框景开场
     get cities() { return CITY_KEYS.slice(); }, get artHash() { return artHash; }, get squiggleHash() { return sqHash; },
     setArtHash(h) { if (traits && /^0x[0-9a-f]{8,}$/i.test(h)) { drawArtCanvas(h); artT = ART_PERIOD; } },   // 研发：用链上 hash 生成巨幕
 
@@ -1697,7 +1772,7 @@ const field = (() => {
       // 城市：屏幕刷新 / 跑马灯滚动 / 闪光衰减 / 障碍灯
       signT -= dt; if (signT <= 0) { drawCoinSign(); drawKScreen(); signT = .5; }
       tokT += dt; if (tokT > 6) { tokT = 0; tokIdx++; drawCoinSign(); }   /* 购物车 token 每 6 秒轮换 */
-      stepSquiggleRig(t); stepAtmos(t, dt); stepNames(dt); progShown += (prog - progShown)*Math.min(1, dt*1.5); progMat.uniforms.uP.value = progShown; progMat.uniforms.uTime.value = t;
+      stepSquiggleRig(t); stepAtmos(t, dt); stepFireworks(dt); stepIntro(dt); stepNames(dt); progShown += (prog - progShown)*Math.min(1, dt*1.5); progMat.uniforms.uP.value = progShown; progMat.uniforms.uTime.value = t;
       spkT -= dt; if (spkT <= 0) { if (curveOn) drawCurve(t); for (let k = 0; k < boardsOn; k++) drawBoard(k, t); drawSpkScreen(); for (let k = 0; k < 6; k++) drawGirl(k, t); spkT = .15; }
       artT -= dt; if (artT <= 0 && traits) { drawArtCanvas(newHash()); flash.setRGB(.25, .25, .3); artT = ART_PERIOD; }   /* 巨幕每 45 秒换一幅新作 */
       punkT -= dt; if (punkT <= 0 && punks.length) { punks[(Math.random()*4)|0] = hashPunk(); drawPunks(); punkT = 4; }   /* 每 4 秒换一张头像 */
@@ -1738,7 +1813,7 @@ function loop(now) {
 }
 
 // keys
-window.addEventListener('keydown', e => { if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return; const k = e.key.toLowerCase(); if (!state.room) return; if (k === 'b') { field.tradeEvent('buy'); chat('buy', 'You', `买入 ${state.room.coin} <span class="amt">${fmt$(rnd(20, 300))}</span>`); } if (k === 's') { field.tradeEvent('sell'); chat('sell', 'You', `卖出 ${state.room.coin} <span class="amt">${fmt$(rnd(20, 300))}</span>`); } if (k === 'c') { const cs = field.cities, cur = field.traits ? field.traits.city : 'hk', nx = cs[(cs.indexOf(cur) + 1) % cs.length]; field.setRoomInfo({ city: nx }); toast('城市：' + field.traits.cityName); } if (k === 'p') { toast('大屏：' + (field.setPosterStyle(field.posterStyle === 'silhouette' ? 'sport' : 'silhouette') === 'silhouette' ? '少女剪影' : '运动海报')); } if (k === 'g') { field.tradeEvent('buy', true); chat('buy', 'You', `买入 ${state.room.coin} <span class="amt">${fmt$(rnd(2000, 9000))}</span>`); } });
+window.addEventListener('keydown', e => { if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return; const k = e.key.toLowerCase(); if (!state.room) return; if (k === 'b') { field.tradeEvent('buy'); chat('buy', 'You', `买入 ${state.room.coin} <span class="amt">${fmt$(rnd(20, 300))}</span>`); } if (k === 's') { field.tradeEvent('sell'); chat('sell', 'You', `卖出 ${state.room.coin} <span class="amt">${fmt$(rnd(20, 300))}</span>`); } if (k === 'c') { const cs = field.cities, cur = field.traits ? field.traits.city : 'hk', nx = cs[(cs.indexOf(cur) + 1) % cs.length]; field.setRoomInfo({ city: nx }); field.playIntro(); toast('城市：' + field.traits.cityName); } if (k === 'i') field.playIntro(); if (k === 'p') { toast('大屏：' + (field.setPosterStyle(field.posterStyle === 'silhouette' ? 'sport' : 'silhouette') === 'silhouette' ? '少女剪影' : '运动海报')); } if (k === 'g') { field.tradeEvent('buy', true); chat('buy', 'You', `买入 ${state.room.coin} <span class="amt">${fmt$(rnd(2000, 9000))}</span>`); } });
 
 // boot
 $('.avatar').style.background = PH('shaun');
