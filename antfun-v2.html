@@ -336,21 +336,64 @@ attachResizer($('#rsL'), 'l'); attachResizer($('#rsR'), 'r');
 
 // ============ waveform covers ============
 const waveCanvases = new Map(); // canvas -> {phase, energy}
-function waveCover(c, energy, cool = false) { waveCanvases.set(c, { ph: Math.random() * 10, e: energy, cool }); return c; }
+// 房间热度 0–1：听众数取对数（≤10 人为 0，≥1 万人为 1）。以后要加在麦人数 / 成交额，只改这里
+const roomHeat = r => Math.max(0, Math.min(1, (Math.log10(Math.max(1, r.n)) - 1)/3));
+// 热度色带：青 → 蓝 → 紫 → 洋红 → 红
+const HEAT_PAL = [[43, 240, 255], [43, 140, 255], [194, 28, 255], [255, 43, 214], [255, 42, 58]];
+const heatCol = p => { p = Math.max(0, Math.min(1, p))*(HEAT_PAL.length - 1); const i = Math.min(HEAT_PAL.length - 2, p|0), f = p - i, A = HEAT_PAL[i], B = HEAT_PAL[i + 1]; return [A[0] + (B[0] - A[0])*f, A[1] + (B[1] - A[1])*f, A[2] + (B[2] - A[2])*f]; };
+function waveCover(c, heat, cool = false) {
+  // 声浪包：几个缓慢平移的高斯包叠加 → 相邻条高低连贯；热度越高，包越多、越高、走得越快
+  const n = 2 + Math.round(heat*3), packs = Array.from({ length: n }, () => ({ x: Math.random(), v: (.04 + Math.random()*.06)*(Math.random() < .5 ? -1 : 1)*(1 + heat*1.5), w: .06 + Math.random()*.08, ph: Math.random()*7, f: .6 + Math.random()*1.2 }));
+  waveCanvases.set(c, { e: heat, cool, packs, lv: null, bars: 0, kick: Math.random()*.8 }); return c;
+}
+// Juicing：每根条是一根欠阻尼弹簧（冲过头→回弹→抖两下）；随机「鼓点」踢一脚；顶端峰值帽被顶起后受重力下落；快速拉伸时变细（squash & stretch）
 function drawWaves(t) {
+  const dt = drawWaves.last ? Math.min(.05, t - drawWaves.last) : .016; drawWaves.last = t;
+  // 检阅扫描线（思路借鉴 Loren Bednar《Parade》，代码自写）：每 SWEEP_T 秒一道竖线从左到右扫过整个大厅，扫到的条依次「张开」
+  const SWEEP_T = 4.6, SWEEP_DUR = 2.2, lob = document.querySelector('.lobby'), lr = lob && lob.getBoundingClientRect();
+  const sk = Math.floor(t/SWEEP_T), sp = (t - sk*SWEEP_T)/SWEEP_DUR, sweepX = lr && sp <= 1 ? lr.left - 60 + (lr.width + 120)*sp : null;
   waveCanvases.forEach((w, c) => {
     if (!c.isConnected) { waveCanvases.delete(c); return; }
-    const W = c.width, H = c.height, g = c.getContext('2d');
-    g.clearRect(0, 0, W, H);
-    const bars = Math.max(8, Math.floor(W / 6));
-    const bw = W / bars;
+    const W = c.width, H = c.height, g = c.getContext('2d'), e = w.e, small = W < 200;
+    const pitch = small ? 8 : 13, bars = Math.max(6, Math.floor(W/pitch)), bw = W/bars, lw = Math.max(3, bw*.58);
+    if (!w.lv || w.bars !== bars) { w.lv = new Float32Array(bars); w.vel = new Float32Array(bars); w.cap = new Float32Array(bars); w.capV = new Float32Array(bars); w.hold = new Float32Array(bars); w.bars = bars; }
+    w.packs.forEach(p => { p.x += p.v*dt; if (p.x > 1.15) p.x -= 1.3; if (p.x < -.15) p.x += 1.3; });
+    w.kick -= dt; if (w.kick <= 0) { const cx = Math.random(), wid = .05 + Math.random()*.08, pow = 1.6 + e*4.2;   // 鼓点：越热越频繁、越猛
+      for (let i = 0; i < bars; i++) { const d = ((i + .5)/bars - cx)/wid; w.vel[i] += pow*Math.exp(-d*d); } w.kick = (1.5 - e*1.05)*(.6 + Math.random()*.8)*(c.closest('.lobby') ? 2 : 1); }   /* 大厅里随机鼓点减半，让检阅线当主节拍 */
+    const inLobby = sweepX != null && c.closest('.lobby'), cr = inLobby ? c.getBoundingClientRect() : null, sx = cr ? cr.width/W : 1;
+    if (!w.swept || w.swept.length !== bars) { w.swept = new Int32Array(bars).fill(-1); w.sweptAt = new Float32Array(bars).fill(-99); }
+    if (cr) for (let i = 0; i < bars; i++) { const bx = cr.left + (i + .5)*bw*sx;                       // 扫描线经过这根条 → 踢一脚（每轮只踢一次）
+      if (w.swept[i] !== sk && sweepX >= bx) { w.swept[i] = sk; w.sweptAt[i] = t; w.vel[i] += 1.3 + e*4.8; } }
+    const sweepLocal = cr ? (sweepX - cr.left)/sx : null;                                               // 扫描线在本画布里的位置（画布像素）
+    const K = 170 + e*110, C = 9;                                                                     // 刚度 / 阻尼（阻尼比≈0.3，明显回弹）
     for (let i = 0; i < bars; i++) {
-      const x = i / bars; const env = Math.sin(t * (1.6 + w.e) + w.ph + i * 0.35) * Math.sin(t * 3.1 + i * 0.8 + w.ph);
-      const h = H * (0.08 + w.e * 0.55 * Math.max(0, env) + 0.06 * Math.abs(Math.sin(i * 1.7 + w.ph)));
-      const a = 0.25 + w.e * 0.6 * Math.max(0, env);
-      const m = w.cool ? 0 : i / bars; g.fillStyle = `rgba(${43 + 212*m|0},${240 - 197*m|0},${255 - 41*m|0},${a.toFixed(3)})`;  // 青→洋红渐变灯管（左栏纯青）
-      g.fillRect(i * bw + 1, (H - h) / 2, bw - 2, h);
+      const x = (i + .5)/bars; let target = .08 + .04*Math.sin(i*1.7 + t*.8);
+      w.packs.forEach(p => { const d = (x - p.x)/p.w, pulse = .55 + .45*Math.sin(t*p.f*(1.5 + e*2) + p.ph + i*.25); target += Math.exp(-d*d)*pulse*(.18 + e*.62); });
+      if (w.sweptAt) { const a = (t - w.sweptAt[i])/.75; if (a >= 0 && a < 1) target += (1 - a)*(1 - a)*(.22 + .55*e); }   /* 扫过后张开 0.75s 再收回（Parade：经过检阅台才展开） */
+      target = Math.min(.95, target);
+      w.vel[i] += (K*(target - w.lv[i]) - C*w.vel[i])*dt; w.lv[i] = Math.max(.03, Math.min(1.08, w.lv[i] + w.vel[i]*dt));
+      if (w.lv[i] >= w.cap[i]) { w.cap[i] = w.lv[i]; w.capV[i] = 0; w.hold[i] = .18; }                // 峰值帽：顶起、停一下、受重力下落
+      else if ((w.hold[i] -= dt) <= 0) { w.capV[i] += 2.6*dt; w.cap[i] = Math.max(w.lv[i], w.cap[i] - w.capV[i]*dt); }
     }
+    g.clearRect(0, 0, W, H); g.lineCap = 'round';
+    const tierOf = amp => amp < .3 ? 0 : amp < .55 ? 1 : amp < .8 ? 2 : 3;                          // 高度分 4 档（Parade：几何量当调色板索引）
+    const colOf = (i, amp) => { if (w.cool) return heatCol(0); const k = tierOf(amp), [r, gg, bb] = heatCol(Math.pow(e, 1.4)*.55 + k*(.06 + .14*e) + .08*e*(i/bars));
+      return [Math.min(255, r + k*12), Math.min(255, gg + k*12), Math.min(255, bb + k*12)]; };
+    const drawBars = glow => { for (let i = 0; i < bars; i++) {
+      const amp = w.lv[i], x = (i + .5)*bw, h = Math.max(lw, H*.8*amp), [r, gg, bb] = colOf(i, amp);
+      const sq = 1 - Math.max(-.18, Math.min(.3, w.vel[i]*.05)), lwi = lw*sq;                       // 上冲变细、回落变粗
+      if (glow) { g.strokeStyle = `rgba(${r|0},${gg|0},${bb|0},${(.18 + .35*Math.min(1, amp)*(.4 + .6*e)).toFixed(3)})`; g.lineWidth = lwi*2.6; }
+      else { const gh = Math.max(h, lw*2), gr = g.createLinearGradient(0, (H - gh)/2, 0, (H + gh)/2); gr.addColorStop(0, `rgba(${r|0},${gg|0},${bb|0},.35)`); gr.addColorStop(.5, `rgba(${Math.min(255, r + 60)|0},${Math.min(255, gg + 60)|0},${Math.min(255, bb + 60)|0},${(.75 + .25*Math.min(1, amp)).toFixed(3)})`); gr.addColorStop(1, `rgba(${r|0},${gg|0},${bb|0},.35)`); g.strokeStyle = gr; g.lineWidth = lwi; }
+      const half = Math.max(.5, h/2 - lw/2); g.beginPath(); g.moveTo(x, H/2 - half); g.lineTo(x, H/2 + half); g.stroke(); } };
+    if ('filter' in g && !small) { g.save(); g.filter = `blur(${(4 + 6*e).toFixed(1)}px)`; drawBars(true); g.restore(); }
+    drawBars(false);
+    if (sweepLocal != null && sweepLocal > -20 && sweepLocal < W + 20) { const gr = g.createLinearGradient(sweepLocal - 26, 0, sweepLocal + 26, 0);   // 检阅线
+      gr.addColorStop(0, 'rgba(230,241,247,0)'); gr.addColorStop(.5, `rgba(230,241,247,${(.07 + .1*e).toFixed(3)})`); gr.addColorStop(1, 'rgba(230,241,247,0)'); g.fillStyle = gr; g.fillRect(sweepLocal - 26, 0, 52, H);
+      g.fillStyle = `rgba(230,241,247,${(.25 + .3*e).toFixed(3)})`; g.fillRect(sweepLocal - .75, H*.12, 1.5, H*.76); }
+    if (!small) for (let i = 0; i < bars; i++) { if (w.cap[i] - w.lv[i] < .025) continue;                // 峰值帽：上下对称的小亮点
+      const x = (i + .5)*bw, y = H*.8*w.cap[i]/2 + lw*.9, [r, gg, bb] = colOf(i, w.cap[i]), a = Math.min(1, (w.cap[i] - w.lv[i])*6);
+      g.fillStyle = `rgba(${Math.min(255, r + 90)|0},${Math.min(255, gg + 90)|0},${Math.min(255, bb + 90)|0},${a.toFixed(3)})`;
+      g.fillRect(x - lw*.45, H/2 - y - 1.5, lw*.9, 3); g.fillRect(x - lw*.45, H/2 + y - 1.5, lw*.9, 3); }
   });
 }
 
@@ -359,7 +402,7 @@ function renderLeft() {
   const rl = $('#roomList'); rl.innerHTML = '';
   rooms.slice().sort((a, b) => b.n - a.n).forEach((r, i) => {
     const b = el('button', 'rc' + (state.room === r ? ' on' : ''));
-    const c = document.createElement('canvas'); c.width = 88; c.height = 88; waveCover(c, Math.min(1, Math.log10(r.n) / 4), true);
+    const c = document.createElement('canvas'); c.width = 88; c.height = 88; waveCover(c, roomHeat(r), true);
     b.appendChild(c);
     b.appendChild(el('div', '', `<div class="t">${r.title}</div><div class="s"><span class="dot">●</span><span>${r.host}</span><span class="tag">${r.tag}</span></div>`));
     b.appendChild(el('div', 'n', `<b>${fmtN(r.n)}</b>听众`));
@@ -383,7 +426,7 @@ function renderLobby() {
   const grid = el('div', 'grid');
   rooms.slice().sort((a, b) => b.n - a.n).forEach((r, i) => {
     const b = el('button', 'lc');
-    const c = document.createElement('canvas'); c.width = 520; c.height = 192; waveCover(c, Math.min(1, Math.log10(r.n) / 4)); b.appendChild(c);
+    const c = document.createElement('canvas'); c.width = 520; c.height = 192; waveCover(c, roomHeat(r)); b.appendChild(c);
     b.appendChild(el('div', 'b', `<div class="h"><span class="av" style="--g:${PH(r.host)}"></span><span>${r.host}</span><span class="tag">${r.tag}</span><span style="margin-left:auto;font-family:var(--mono)">绑定 ${r.coin}</span></div><div class="t">${r.title}</div><div class="f"><span class="n"><b>${fmtN(r.n)}</b> 听众 · ${r.speakers.length} 在麦</span><span class="btn sm pri">Enter</span></div>`));
     b.addEventListener('click', () => enterRoom(r));
     grid.appendChild(b);
