@@ -1153,11 +1153,14 @@ const field = (() => {
   const sqRig = new THREE.Group(); scene.add(sqRig); let sqOn = false;
   function buildSquiggleRig(r) {
     sqRig.children.slice().forEach(o => { o.geometry.dispose(); sqRig.remove(o); });
-    const c0 = sqAng != null ? sqAng : aveAng, span = 1.05, n = 7 + ((r()*4)|0), pts = [], lows = [];   // 内圈与中圈之间的空环带（r≈61），正对一条放射大街
-    for (let i = 0; i < n; i++) { const u = i/(n - 1), low = i % 2 === 0, y = low ? 1.2 : 42 + r()*38, a = c0 + (u - .5)*span, rr = 66 + (r() - .5)*10;   // 高低交替：低点触地，高点冲出楼顶
-      const p = new THREE.Vector3(Math.cos(a)*rr, y, Math.sin(a)*rr); pts.push(p); if (low) lows.push(p); }
-    const curve = new THREE.CatmullRomCurve3(pts, false, 'centripetal'), R = 2.4 + r()*.8;
-    sqRig.add(new THREE.Mesh(new THREE.TubeGeometry(curve, 700, R, 18, false), sqTubeMat));
+    const c0 = sqAng != null ? sqAng : aveAng, span = 1.15, n = 5 + 2*((r()*2)|0), R = 3.8 + r()*1.0, key = [], pts = [], lows = [];   // 内圈与中圈之间的空环带，正对一条放射大街；2–3 个拱
+    for (let i = 0; i < n; i++) key.push({ y: i % 2 === 0 ? R*.55 : 44 + r()*36, rr: 66 + (r() - .5)*8 });               // 关键点：低点贴地（管子半径决定），高点冲出楼顶
+    const S = 40; for (let i = 0; i < n - 1; i++) for (let k = 0; k < S; k++) { const u = k/S, e = .5 - .5*Math.cos(Math.PI*u), A = key[i], B = key[i + 1];   // 余弦过渡：拱顶与触地处都是圆滑的弧
+      const a = c0 + ((i + u)/(n - 1) - .5)*span, y = A.y + (B.y - A.y)*e, rr = A.rr + (B.rr - A.rr)*e; pts.push(new THREE.Vector3(Math.cos(a)*rr, y, Math.sin(a)*rr)); }
+    { const a = c0 + .5*span, B = key[n - 1]; pts.push(new THREE.Vector3(Math.cos(a)*B.rr, B.y, Math.sin(a)*B.rr)); }
+    key.forEach((K, i) => { if (i % 2 === 0) { const a = c0 + (i/(n - 1) - .5)*span; lows.push(new THREE.Vector3(Math.cos(a)*K.rr, 0, Math.sin(a)*K.rr)); } });
+    const curve = new THREE.CatmullRomCurve3(pts, false, 'centripetal');
+    sqRig.add(new THREE.Mesh(new THREE.TubeGeometry(curve, 900, R, 24, false), sqTubeMat));
     [pts[0], pts[pts.length - 1]].forEach(p => { const cap = new THREE.Mesh(new THREE.SphereGeometry(R, 18, 12), sqTubeMat); cap.position.copy(p); sqRig.add(cap); });   // 圆头
     lows.forEach(p => { const pool = new THREE.Mesh(new THREE.CircleGeometry(R*3.2, 40), new THREE.MeshBasicMaterial({ map: texGlow, color: 0xfff2cc, transparent: true, opacity: .55, blending: THREE.AdditiveBlending, depthWrite: false, fog: false }));
       pool.rotation.x = -Math.PI/2; pool.position.set(p.x, .06, p.z); sqRig.add(pool); });   // 触地光池
