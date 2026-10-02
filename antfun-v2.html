@@ -1139,9 +1139,15 @@ const field = (() => {
     scan(g, 512, 512); t.needsUpdate = true;
   }
   // 10) 城市艺术巨幕：香港/上海 = Fidenza 风格流场；东京 = 浮世绘；纽约/首尔 = Ringers 风格钉绳（均为自写算法，币名做种子，每个币一张）
-  const RINGER_PAL = { ny: { bg: '#F3F1EC', rope: '#1B1B1D', fill: ['#C3423F', '#4381C1', '#F2C945'], peg: '#1B1B1D', hi: '#F2C945' },
-                       seoul: { bg: '#EAE2D0', rope: '#1F2A44', fill: ['#2E8B7A', '#D9472B', '#E8B33A', '#2F4FA0'], peg: '#1F2A44', hi: '#D9472B' } };
-  function drawRingers(r, P) {                                                     // 钉阵 + 绳圈：钉按格点或二级细分布点，取子集按绕质心角排序，绳在凸钉外侧、凹钉内侧缠绕
+  // Ringers 配色组：[底色, 绳色, 填色, 钉色, 高亮钉]；每件作品按 hash 抽一组，避免纯黑白（经典白底黑绳只作 ~10% 稀有款）
+  const RINGER_PAL = {
+    ny: [['#E9A23B', '#1F3A8A', '#C3423F', '#1F3A8A', '#F7F1E3'], ['#2F5DA8', '#F2C945', '#E5533D', '#F2C945', '#FFFFFF'], ['#9ED9C8', '#C3423F', '#2F5DA8', '#C3423F', '#F2C945'],
+         ['#F2A7B8', '#1E4D8C', '#F2C945', '#1E4D8C', '#E5533D'], ['#22324A', '#F2C945', '#E5533D', '#4FB3BF', '#FFFFFF']],
+    seoul: [['#2E8B7A', '#F2D35B', '#D9472B', '#F2D35B', '#FFFFFF'], ['#C8402F', '#F4E9D3', '#2F4FA0', '#F4E9D3', '#F2D35B'], ['#F2D35B', '#2F4FA0', '#D9472B', '#2F4FA0', '#2E8B7A'],
+            ['#2F3E7A', '#E8B33A', '#2E8B7A', '#D9472B', '#F4E9D3'], ['#E9EEE6', '#2E8B7A', '#D9472B', '#2F4FA0', '#E8B33A']],
+    classic: ['#F3F1EC', '#1B1B1D', '#C3423F', '#1B1B1D', '#F2C945'] };
+  function drawRingers(r, set) {                                                   // 钉阵 + 绳圈：钉按格点或二级细分布点，取子集按绕质心角排序，绳在凸钉外侧、凹钉内侧缠绕
+    const [bg, rope, fill, peg, hi0] = r() < .1 ? RINGER_PAL.classic : set[(r()*set.length)|0], P = { bg, rope, fill: [fill], peg, hi: hi0 };
     const { g, t } = flowScr, W = 640, H = 800, M = 70; g.fillStyle = P.bg; g.fillRect(0, 0, W, H);
     const pegs = [], n = 3 + ((r()*3)|0), m = Math.round(n*1.25), sub = r() < .3;
     for (let i = 0; i < n; i++) for (let j = 0; j < m; j++) { const x = M + (W - 2*M)*(n === 1 ? .5 : i/(n - 1)), y = M + (H - 2*M)*(j/(m - 1)), rr = 18 + r()*16;
@@ -1156,7 +1162,7 @@ const field = (() => {
     const segs = ring.map((p, i) => tan(p, ring[(i + 1) % N]));
     const path = () => { g.beginPath(); ring.forEach((p, i) => { const inn = segs[(i + N - 1) % N][1], out = segs[i][0], a0 = Math.atan2(inn[1] - p.y, inn[0] - p.x), a1 = Math.atan2(out[1] - p.y, out[0] - p.x);
       if (i === 0) g.moveTo(inn[0], inn[1]); g.arc(p.x, p.y, p.r, a0, a1, p.s < 0); g.lineTo(segs[i][1][0], segs[i][1][1]); }); g.closePath(); };
-    if (r() < .55) { path(); g.fillStyle = P.fill[(r()*P.fill.length)|0]; g.fill('evenodd'); }   // 一半作品填色
+    path(); g.fillStyle = P.fill[0]; g.fill('evenodd');   // 绳圈内一律填色
     g.lineJoin = 'round'; g.lineWidth = 9; g.strokeStyle = P.rope; path(); g.stroke();
     const hi = (r()*pegs.length)|0; pegs.forEach((p, i) => { g.fillStyle = i === hi ? P.hi : P.peg; g.beginPath(); g.arc(p.x, p.y, ring.includes(p) ? Math.max(5, p.r*.35) : 5, 0, 7); g.fill(); });   // 单钉高亮
     for (let i = 0; i < 7000; i++) { g.fillStyle = `rgba(40,30,20,${(r()*.05).toFixed(3)})`; g.fillRect(r()*W, r()*H, 1.2, 1.2); }
