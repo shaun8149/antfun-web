@@ -1049,8 +1049,8 @@ const field = (() => {
     if (Math.random() < .05) { const y = Math.random()*520, h = 12 + Math.random()*40; g.drawImage(girls[k].c, 0, y, 384, h, (Math.random() - .5)*40, y, 384, h); }   /* 故障错位 */
     scan(g, 384, 576); tex.needsUpdate = true;
   }
-  const SUBJ_W = { hk: ['dragon', 'koi', 'geisha', 'tiger', 'eye'], sh: ['dragon', 'koi', 'geisha', 'tiger', 'eye'], tokyo: ['geisha', 'eye', 'koi', 'tiger', 'dragon'] };
-  const subjFor = () => { const L = SUBJ_W[traits && traits.city] || ['tiger', 'eye', 'geisha', 'koi', 'dragon']; return L[Math.min(L.length - 1, Math.floor(Math.pow(Math.random(), 1.6)*L.length))]; };   // 城市侧重：列表靠前的更常见
+  const SUBJ_W = { hk: ['dragon', 'koi', 'geisha', 'eye'], sh: ['dragon', 'koi', 'geisha', 'eye'], tokyo: ['geisha', 'eye', 'koi', 'dragon'] };
+  const subjFor = () => { const L = SUBJ_W[traits && traits.city] || ['eye', 'geisha', 'koi', 'dragon']; return L[Math.min(L.length - 1, Math.floor(Math.pow(Math.random(), 1.6)*L.length))]; };   // 城市侧重：列表靠前的更常见
   const subjBase = [], subjName = [], subjT = []; const SUBJ_PERIOD = 30;
   function drawSubject(name) {
     const c = document.createElement('canvas'); c.width = 384; c.height = 576; const g = c.getContext('2d'); g.fillStyle = '#04050a'; g.fillRect(0, 0, 384, 576);
@@ -1063,26 +1063,6 @@ const field = (() => {
       g.strokeStyle = '#E9C46A'; g.lineWidth = 4; [[255, 100, 300, 60], [270, 120, 322, 92]].forEach(([a, b, c2, d]) => { g.beginPath(); g.moveTo(a, b); g.lineTo(c2, d); g.stroke(); });
       g.fillStyle = '#F4EDE4'; g.beginPath(); g.moveTo(130, 360); g.lineTo(260, 345); g.lineTo(300, 470); g.lineTo(90, 470); g.closePath(); g.fill(); g.fillStyle = '#1a1424'; g.beginPath(); g.moveTo(170, 360); g.lineTo(230, 352); g.lineTo(210, 470); g.lineTo(160, 470); g.closePath(); g.fill();
       g.save(); g.translate(110, 400); g.rotate(-.5); for (let i = 0; i <= 10; i++) { const a = -Math.PI*.9 + i*Math.PI*.08; g.fillStyle = i % 2 ? '#F4EDE4' : '#E36A6A'; g.beginPath(); g.moveTo(0, 0); g.arc(0, 0, 120, a, a + Math.PI*.08); g.closePath(); g.fill(); } g.restore(); }
-    else if (name === 'tiger') {                                                                 // 威猛老虎：咆哮正脸、獠牙、竖瞳、压低的眉、火焰条纹（刺青风）
-      const cx = 192, cy = 300, O = '#E8761C', CR = '#F6E7CC', K = '#0d0a08';
-      const poly = (pts, col) => { g.fillStyle = col; g.beginPath(); pts.forEach(([x, y], i) => i ? g.lineTo(cx + x, cy + y) : g.moveTo(cx + x, cy + y)); g.closePath(); g.fill(); };
-      glow('#FF6A1A', 26); poly([[0, -190], [70, -175], [128, -140], [158, -80], [170, -10], [160, 60], [130, 120], [80, 168], [0, 186], [-80, 168], [-130, 120], [-160, 60], [-170, -10], [-158, -80], [-128, -140], [-70, -175]], O); g.shadowBlur = 0;   // 头部：宽颧骨、方下颌
-      [-1, 1].forEach(sd => { poly([[sd*112, -150], [sd*168, -205], [sd*162, -118]], O); poly([[sd*124, -150], [sd*156, -184], [sd*150, -130]], K);   // 后压的耳朵
-        poly([[sd*170, -10], [sd*205, 20], [sd*176, 50], [sd*200, 80], [sd*160, 92], [sd*140, 40]], CR);                       // 腮毛
-        poly([[sd*20, 20], [sd*120, 40], [sd*128, 110], [sd*70, 150], [sd*20, 120]], CR); });                                   // 白色口鼻区
-      poly([[-26, -70], [26, -70], [30, 20], [0, 34], [-30, 20]], O);                                                            // 鼻梁
-      g.strokeStyle = K; g.lineWidth = 5; [-14, 0, 14].forEach(dx => { g.beginPath(); g.moveTo(cx + dx - 8, cy - 40); g.lineTo(cx + dx, cy - 30); g.lineTo(cx + dx + 8, cy - 40); g.stroke(); });   // 皱起的鼻梁纹
-      [-1, 1].forEach(sd => { const fl = [[sd*40, -180, sd*28, -120], [sd*78, -168, sd*58, -112], [sd*112, -146, sd*86, -96], [sd*150, -96, sd*108, -70], [sd*166, -30, sd*120, -22], [sd*160, 40, sd*126, 22], [sd*134, 104, sd*112, 70]];   // 火焰条纹（尖三角）
-        fl.forEach(([x1, y1, x2, y2]) => poly([[x1, y1], [x2, y2], [x2 + sd*-14, y2 + 18], [x1 - sd*4, y1 + 26]], K)); poly([[-12, -186], [12, -186], [6, -130], [-6, -130]], K); });
-      [-1, 1].forEach(sd => { poly([[sd*18, -78], [sd*96, -96], [sd*104, -78], [sd*30, -60]], K);                                 // 压低的眉
-        glow('#FFD23F', 16); poly([[sd*30, -58], [sd*92, -76], [sd*84, -44], [sd*44, -40]], '#FFC21A'); g.shadowBlur = 0;      // 眯起的眼
-        poly([[sd*60, -70], [sd*66, -70], [sd*64, -44], [sd*58, -44]], K); });                                                  // 竖瞳
-      poly([[-22, 26], [22, 26], [10, 46], [-10, 46]], K);                                                                      // 鼻头
-      poly([[-78, 92], [-40, 74], [40, 74], [78, 92], [70, 150], [0, 176], [-70, 150]], '#3a0608');                             // 张开的嘴
-      poly([[-60, 96], [60, 96], [52, 120], [-52, 120]], '#B3262E');                                                           // 舌
-      [-1, 1].forEach(sd => { poly([[sd*44, 80], [sd*64, 86], [sd*52, 140]], '#FFF6E6'); poly([[sd*50, 168], [sd*64, 150], [sd*42, 118]], '#FFF6E6');   // 上下獠牙
-        for (let k = 0; k < 2; k++) poly([[sd*(14 + k*14), 78], [sd*(26 + k*14), 78], [sd*(20 + k*14), 92]], '#FFF6E6'); });
-      g.strokeStyle = 'rgba(255,240,220,.7)'; g.lineWidth = 2; [-1, 1].forEach(sd => { for (let k = 0; k < 3; k++) { g.beginPath(); g.moveTo(cx + sd*104, cy + 60 + k*14); g.lineTo(cx + sd*(180 + k*6), cy + 40 + k*22); g.stroke(); } }); }
     else if (name === 'eye') {                                                                   // 动漫大眼睛
       const cx = 192, cy = 290; g.strokeStyle = '#EAF2FF'; g.lineCap = 'round'; glow('#9fd8ff', 12);
       g.lineWidth = 12; g.beginPath(); g.moveTo(30, cy - 10); g.bezierCurveTo(90, cy - 140, 300, cy - 150, 360, cy - 40); g.stroke();
