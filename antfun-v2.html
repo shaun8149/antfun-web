@@ -1388,25 +1388,7 @@ const field = (() => {
         vec4 mv=modelViewMatrix*vec4(p,1.0); vA=(.55+.45*step(.12,fract(aR*7.0+uTime*.8)))*smoothstep(30.0,52.0,-mv.z); gl_PointSize=.65*uScale/-mv.z;   /* 离镜头太近就隐去 */ gl_Position=projectionMatrix*mv; }`,
     fragmentShader: `varying float vA; varying vec3 vC; void main(){ float r=length(gl_PointCoord-.5); if(r>.5) discard; gl_FragColor=vec4(vC*smoothstep(.5,.15,r)*vA*1.05,1.0); }` });
   const fish = new THREE.Points(fishGeo, fishMat); fish.scale.setScalar(.5); fish.frustumCulled = false;   /* 缩小一半 */ scene.add(fish); let fishPh = Math.random()*6.28;
-  // 飞行器：深色悬浮车沿几条环形航道在楼群间穿行，尾部一对红灯、车头一盏白灯（航道避开镜头所在的广场内圈）
-  const LANES = [[40, 16, .16], [42, 24, -.13], [61, 20, .11], [62, 34, -.1], [64, 46, .08], [88, 40, -.07], [100, 58, .06]];   // [半径, 高度, 角速度]
-  const VEH = []; LANES.forEach(([R, Y, w], li) => { const n = li < 2 ? 2 : 3; for (let k = 0; k < n; k++) VEH.push({ R: R + (Math.random() - .5)*3, Y: Y + (Math.random() - .5)*4, w: w*(.85 + Math.random()*.3), a: k/n*Math.PI*2 + Math.random(), bob: Math.random()*6 }); });
-  const vehBody = new THREE.InstancedMesh(new THREE.BoxGeometry(3.4, .75, 1.5), new THREE.MeshBasicMaterial({ color: 0x0c1119 }), VEH.length); vehBody.frustumCulled = false; scene.add(vehBody);
-  const vehCab = new THREE.InstancedMesh(new THREE.BoxGeometry(1.5, .55, 1.2), new THREE.MeshBasicMaterial({ color: 0x141c28 }), VEH.length); vehCab.frustumCulled = false; scene.add(vehCab);
-  const vlPos = new Float32Array(VEH.length*3*3), vlCol = new Float32Array(VEH.length*3*3);
-  VEH.forEach((v, i) => { vlCol.set([2.2, .15, .1, 2.2, .15, .1, 1.6, 1.6, 1.4], i*9); });   // 两盏红尾灯 + 一盏白前灯（>1 触发泛光）
-  const vlGeo = new THREE.BufferGeometry(); vlGeo.setAttribute('position', new THREE.BufferAttribute(vlPos, 3)); vlGeo.setAttribute('aCol', new THREE.BufferAttribute(vlCol, 3));
-  const vlMat = new THREE.ShaderMaterial({ transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false, uniforms: { uScale: { value: 400 } },
-    vertexShader: `attribute vec3 aCol; uniform float uScale; varying vec3 vC; void main(){ vC=aCol; vec4 mv=modelViewMatrix*vec4(position,1.0); gl_PointSize=1.9*uScale/-mv.z; gl_Position=projectionMatrix*mv; }`,
-    fragmentShader: `varying vec3 vC; void main(){ float r=length(gl_PointCoord-.5); if(r>.5) discard; gl_FragColor=vec4(vC*smoothstep(.5,.0,r),1.0); }` });
-  const vehLights = new THREE.Points(vlGeo, vlMat); vehLights.frustumCulled = false; scene.add(vehLights);
-  const _vm = new THREE.Matrix4(), _vq = new THREE.Quaternion(), _vs = new THREE.Vector3(1.6, 1.6, 1.6), _vp = new THREE.Vector3(), _up = new THREE.Vector3(0, 1, 0);
-  function stepVehicles(t, dt) { VEH.forEach((v, i) => { v.a += v.w*dt; const x = Math.cos(v.a)*v.R, z = Math.sin(v.a)*v.R, y = v.Y + Math.sin(t*.7 + v.bob)*.5, s2 = Math.sign(v.w);
-      const hx = -Math.sin(v.a)*s2, hz = Math.cos(v.a)*s2, yaw = Math.atan2(-hz, hx);   // 车头朝前进方向
-      _vq.setFromAxisAngle(_up, yaw); vehBody.setMatrixAt(i, _vm.compose(_vp.set(x, y, z), _vq, _vs)); vehCab.setMatrixAt(i, _vm.compose(_vp.set(x - hx*.64, y + .88, z - hz*.64), _vq, _vs));
-      const lx = -hz, lz = hx; vlPos.set([x - hx*2.8 + lx*.8, y, z - hz*2.8 + lz*.8, x - hx*2.8 - lx*.8, y, z - hz*2.8 - lz*.8, x + hx*2.9, y - .15, z + hz*2.9], i*9); });
-    vehBody.instanceMatrix.needsUpdate = vehCab.instanceMatrix.needsUpdate = true; vlGeo.attributes.position.needsUpdate = true; }
-  function stepAtmos(t, dt) { stepVehicles(t, dt); bokMat.uniforms.uTime.value = t; bokMat.uniforms.uBoost.value = Math.max(0, bokMat.uniforms.uBoost.value - dt*.5); fishMat.uniforms.uTime.value = t;
+  function stepAtmos(t, dt) { bokMat.uniforms.uTime.value = t; bokMat.uniforms.uBoost.value = Math.max(0, bokMat.uniforms.uBoost.value - dt*.5); fishMat.uniforms.uTime.value = t;
     fishPh += dt*.035; const R = 40, y = 22 + 3*Math.sin(t*.2); fish.position.set(Math.cos(fishPh)*R, y, Math.sin(fishPh)*R); fish.rotation.set(0, -fishPh - Math.PI/2, 0); }   /* 身体沿圆周切线、头朝前进方向，侧面朝向广场中心 */
   // 加密街招：每座城的内圈楼低层挂 3 块英文霓虹横招（WE BUY NFTs FOR CASH / CONNECT WALLET / GM）
   const CRYPTO_TXT = [['WE BUY NFTs', 'FOR CASH'], ['CONNECT', 'WALLET'], ['GM', 'WAGMI']], cryptoCv = CRYPTO_TXT.map(() => cnv(768, 288)), cryptoMats = cryptoCv.map(c => addMat(c.t));
@@ -1708,7 +1690,7 @@ const field = (() => {
   dom.addEventListener('wheel', e => { camTargetDist = Math.max(14, Math.min(36, camTargetDist*(1 + Math.sign(e.deltaY)*.08))); }, { passive: true });
   // mount / unmount
   let ro = null;
-  function resize() { if (!stageEl) return; const w = stageEl.clientWidth, h = stageEl.clientHeight; if (!w || !h) return; renderer.setSize(w, h, false); camera.aspect = w/h; camera.updateProjectionMatrix(); bokMat.uniforms.uScale.value = fishMat.uniforms.uScale.value = fwMat.uniforms.uScale.value = vlMat.uniforms.uScale.value = h*.9; sizeIntro(); resizeRT(); }
+  function resize() { if (!stageEl) return; const w = stageEl.clientWidth, h = stageEl.clientHeight; if (!w || !h) return; renderer.setSize(w, h, false); camera.aspect = w/h; camera.updateProjectionMatrix(); bokMat.uniforms.uScale.value = fishMat.uniforms.uScale.value = fwMat.uniforms.uScale.value = h*.9; sizeIntro(); resizeRT(); }
   // ===== 框景开场：进房先从「框」里看城市（剪影 + 猫），约 1 秒后镜头穿过框推进城市；镜头同时由远推近、继续正向环绕 =====
   const introCv = document.createElement('canvas'); introCv.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:1';
   const ig = introCv.getContext('2d'), INTRO_HOLD = 1.0, INTRO_PUSH = 2.6; let introAge = 99, introOn = true, introKind = 'window', drops = [];
