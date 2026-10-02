@@ -1358,7 +1358,7 @@ const field = (() => {
       g.font = `800 ${fitSize(g, txt, W - 60, 90)}px ${FONT}`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = '#EEF4FF'; g.fillText(txt, x + W/2, 192); }
     scan(g, 2048, 384); tex.needsUpdate = true; }
   // 漂浮光点（散景）：几百颗慢慢上浮摇摆的光球，少数最亮的带十字星芒；颜色取城市配色 + 暖红橙
-  const BOK_N = 800, bokPos = new Float32Array(BOK_N*3), bokSeed = new Float32Array(BOK_N*4);
+  const BOK_N = 200, bokPos = new Float32Array(BOK_N*3), bokSeed = new Float32Array(BOK_N*4);
   for (let i = 0; i < BOK_N; i++) { const a = Math.random()*Math.PI*2, r = 14 + Math.pow(Math.random(), .7)*90; bokPos.set([Math.cos(a)*r, 3 + Math.random()*70, Math.sin(a)*r], i*3); bokSeed.set([Math.random(), Math.random(), Math.random(), Math.random() < .07 ? 1 : 0], i*4); }
   const bokGeo = new THREE.BufferGeometry(); bokGeo.setAttribute('position', new THREE.BufferAttribute(bokPos, 3)); bokGeo.setAttribute('aSeed', new THREE.BufferAttribute(bokSeed, 4));
   const bokMat = new THREE.ShaderMaterial({ transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false,
@@ -1366,7 +1366,7 @@ const field = (() => {
     vertexShader: `attribute vec4 aSeed; uniform float uTime,uBoost,uScale; varying vec4 vS; varying float vA;
       void main(){ vS=aSeed; vec3 p=position; p.y=mod(p.y+uTime*(.6+aSeed.x*1.2)+uBoost*aSeed.y*6.0,74.0)+2.0; p.x+=sin(uTime*.3+aSeed.y*20.0)*1.5; p.z+=cos(uTime*.25+aSeed.z*20.0)*1.5;
         vec4 mv=modelViewMatrix*vec4(p,1.0); float d=-mv.z; vA=1.3*smoothstep(2.0,10.0,mod(p.y,74.0))*(.6+.4*sin(uTime*(1.0+aSeed.z*2.0)+aSeed.x*30.0));
-        gl_PointSize=(aSeed.w>.5?5.0:1.8+aSeed.x*2.6)*uScale/d*(1.0+uBoost*.6); gl_Position=projectionMatrix*mv; }`,
+        gl_PointSize=(aSeed.w>.5?2.5:.9+aSeed.x*1.3)*uScale/d*(1.0+uBoost*.6);   /* 尺寸减半 */ gl_Position=projectionMatrix*mv; }`,
     fragmentShader: `uniform vec3 uA,uB; varying vec4 vS; varying float vA;
       void main(){ vec2 q=gl_PointCoord-.5; float r=length(q); vec3 col=vS.y<.35?vec3(1.0,.32,.18):(vS.y<.55?vec3(1.0,.62,.25):(vS.y<.8?uB:uA));
         float a=smoothstep(.5,.0,r)*.9; if(vS.w>.5){ a=exp(-r*r*90.0)*1.4+exp(-abs(q.x)*60.0)*exp(-abs(q.y)*5.0)*.9+exp(-abs(q.y)*60.0)*exp(-abs(q.x)*5.0)*.9; col=mix(col,vec3(1.0),.45); }   /* 星芒 */
@@ -1381,11 +1381,13 @@ const field = (() => {
   for (let i = 0; i < fr2.length; i++) { fp[i*3] = fishPts[i*4]; fp[i*3 + 1] = fishPts[i*4 + 1]; fr2[i] = fishPts[i*4 + 3]; }
   fishGeo.setAttribute('position', new THREE.BufferAttribute(fp, 3)); fishGeo.setAttribute('aR', new THREE.BufferAttribute(fr2, 1));
   const fishMat = new THREE.ShaderMaterial({ transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false, uniforms: { uTime: { value: 0 }, uScale: { value: 400 } },
-    vertexShader: `attribute float aR; uniform float uTime,uScale; varying float vA;
-      void main(){ vec3 p=position; float u=(p.x+16.0)/32.0; p.z+=sin(uTime*2.2-u*4.0)*pow(1.0-u,1.6)*4.0; p.y+=sin(uTime*1.1)*.4;   /* 摆尾 */
-        vec4 mv=modelViewMatrix*vec4(p,1.0); vA=(.55+.45*step(.12,fract(aR*7.0+uTime*.8)))*smoothstep(30.0,52.0,-mv.z); gl_PointSize=1.3*uScale/-mv.z;   /* 离镜头太近就隐去 */ gl_Position=projectionMatrix*mv; }`,
-    fragmentShader: `varying float vA; void main(){ float r=length(gl_PointCoord-.5); if(r>.5) discard; gl_FragColor=vec4(vec3(.82,.93,1.0)*smoothstep(.5,.15,r)*vA*.95,1.0); }` });
-  const fish = new THREE.Points(fishGeo, fishMat); fish.frustumCulled = false; scene.add(fish); let fishPh = Math.random()*6.28;
+    vertexShader: `attribute float aR; uniform float uTime,uScale; varying float vA; varying vec3 vC;
+      void main(){ vec3 p=position; float u=(p.x+16.0)/32.0; float n=sin(p.x*.38+1.3)*sin(p.y*.55+.7)+.35*sin(p.x*.9+p.y*.4);   /* 锦鲤花斑：约一半点是红或金 */
+        vC=n>.18?vec3(1.0,.24,.16):(n<-.22?vec3(1.0,.74,.18):vec3(.82,.93,1.0));
+        p.z+=sin(uTime*2.2-u*4.0)*pow(1.0-u,1.6)*4.0; p.y+=sin(uTime*1.1)*.4;   /* 摆尾 */
+        vec4 mv=modelViewMatrix*vec4(p,1.0); vA=(.55+.45*step(.12,fract(aR*7.0+uTime*.8)))*smoothstep(30.0,52.0,-mv.z); gl_PointSize=.65*uScale/-mv.z;   /* 离镜头太近就隐去 */ gl_Position=projectionMatrix*mv; }`,
+    fragmentShader: `varying float vA; varying vec3 vC; void main(){ float r=length(gl_PointCoord-.5); if(r>.5) discard; gl_FragColor=vec4(vC*smoothstep(.5,.15,r)*vA*1.05,1.0); }` });
+  const fish = new THREE.Points(fishGeo, fishMat); fish.scale.setScalar(.5); fish.frustumCulled = false;   /* 缩小一半 */ scene.add(fish); let fishPh = Math.random()*6.28;
   function stepAtmos(t, dt) { bokMat.uniforms.uTime.value = t; bokMat.uniforms.uBoost.value = Math.max(0, bokMat.uniforms.uBoost.value - dt*.5); fishMat.uniforms.uTime.value = t;
     fishPh += dt*.035; const R = 40, y = 22 + 3*Math.sin(t*.2); fish.position.set(Math.cos(fishPh)*R, y, Math.sin(fishPh)*R); fish.rotation.set(0, -fishPh - Math.PI/2, 0); }   /* 身体沿圆周切线、头朝前进方向，侧面朝向广场中心 */
   // 加密街招：每座城的内圈楼低层挂 3 块英文霓虹横招（WE BUY NFTs FOR CASH / CONNECT WALLET / GM）
