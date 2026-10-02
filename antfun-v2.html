@@ -2,7 +2,7 @@
 <title>ANT.FUN 情绪声场</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Chakra+Petch:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Noto+Sans+TC:wght@700&family=Noto+Sans+JP:wght@700&family=Noto+Sans+KR:wght@700&family=Chakra+Petch:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
 <style>
@@ -295,7 +295,7 @@ const rooms = [
   { id: 2, host: '繁花里877CTG', title: '🔥🔥牛🐮来🔥🔥，想要在币圈翻身的人进来直播间，超哥教你如何管理资产…', n: 99, coin: 'BTC', tag: '策略', speakers: ['繁花里877CTG','CTG-小助理'], started: 3*3600+52*60, ends: 2*3600, pin: { t: '今日课件', s: '仓位管理三原则.pdf', a: '查看' } },
   { id: 3, host: '深圳至尊宝亚哥', title: '抓住松鼠💪，齐天一起冲万倍🎉🎉🎉', n: 79, coin: 'SQRL', tag: 'Meme', speakers: ['深圳至尊宝亚哥','松鼠社区-阿杰','齐天'], started: 3*3600+9*60, ends: 4*3600, pin: { t: '松鼠发射台', s: '饼干发射台 · 进度 62%', a: 'Open' } },
   { id: 4, host: '泽姮', title: '🔥🔥🔥Lucky99官方直播间', n: 1240, coin: 'LUCKY99', tag: '官方', speakers: ['泽姮','Lucky99-客服','运营小美','大熊猫'], started: 3*3600+28*60, ends: 5*3600, pin: { t: 'Lucky99 · 0.4× 权重', s: '交易挖矿第三期 · 高税币', a: '去交易' } },
-  { id: 5, host: 'Ant.fun有道社区赫本先生', title: '蚂蚁有道 社区晨聊 第87期', n: 71, coin: 'ANTFUN', tag: '晨聊', speakers: ['赫本先生','有道-小满'], started: 4*3600+32*60, ends: 40*60, pin: { t: '第 87 期回放', s: '前 86 期已归档', a: '回放' } },
+  { id: 5, host: 'Ant.fun有道社区赫本先生', title: '蚂蚁有道 社区晨聊 第87期', n: 71, coin: 'ANTFUN', tag: '晨聊', city: 'seoul', speakers: ['赫本先生','有道-小满'], started: 4*3600+32*60, ends: 40*60, pin: { t: '第 87 期回放', s: '前 86 期已归档', a: '回放' } },
   { id: 6, host: 'Bitgold-阿彪', title: '平台后续主要发展业务，BITGOLD 新邀请体系即将上线', n: 10480, coin: 'BGLD', tag: '发布', speakers: ['Bitgold-阿彪','八方来财yc','BitGold答疑-郑','中奖小助手'], started: 1*3600+2*60, ends: 9*3600+36*60, pin: { t: 'BitGold', s: 'AI Quantitative Mining', a: 'Open' } },
   { id: 7, host: '星链公社-简单', title: '🔥星链公社🔥官方 币圈那些事？', n: 23, coin: 'STAR', tag: '闲聊', speakers: ['星链公社-简单'], started: 1*3600+54*60, ends: 3*3600, pin: { t: '公社周报', s: '第 12 周', a: '查看' } },
 ];
@@ -600,10 +600,11 @@ $('#mSocial').addEventListener('click', () => setMode('social')); $('#mTrade').a
 const field = (() => {
   const COL = { ant: new THREE.Color('#FF2BD6'), buy: new THREE.Color('#2BF0FF'), sell: new THREE.Color('#FF2A3A'), hand: new THREE.Color('#FFD23F'), you: new THREE.Color('#FFE3A8'), wave: new THREE.Color('#8FF7FF'), violet: new THREE.Color('#C21CFF'), cyan: new THREE.Color('#2BF0FF') };
   const STAGE_R = 3.2, HAND_R = 5.4, PLAZA_R = 14, MAX_WAVES = 10, MAX_SPK = 8, TRAIL = 22, MAX_OSC = 4000;
-  const NEON = ['#FF2BD6', '#2BF0FF', '#C21CFF', '#FF2A3A', '#FFD23F'], FONT = '"Chakra Petch","Noto Sans SC",sans-serif';
+  const NEON = ['#FF2BD6', '#2BF0FF', '#C21CFF', '#FF2A3A', '#FFD23F']; let FONT = '"Chakra Petch","Noto Sans SC",sans-serif';   /* 随城市切换字体（见 CITIES.font） */
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
   renderer.setPixelRatio(Math.min(devicePixelRatio, 2)); renderer.setClearColor(0x050b14, 1);
   const scene = new THREE.Scene(); scene.fog = new THREE.FogExp2(0x0a0c1c, 0.008);
+  const uHaze = { value: new THREE.Color(.22, .06, .24) };   /* 城市雾色：天空地平线 / 云 / 远景雾都用它，随城市切换 */
   const camera = new THREE.PerspectiveCamera(55, 1, 0.1, 600);
   const radialTex = (stops, size = 128) => { const c = document.createElement('canvas'); c.width = c.height = size; const g = c.getContext('2d'); const grd = g.createRadialGradient(size/2,size/2,0,size/2,size/2,size/2); stops.forEach(([o, col]) => grd.addColorStop(o, col)); g.fillStyle = grd; g.fillRect(0,0,size,size); const t = new THREE.CanvasTexture(c); t.minFilter = THREE.LinearFilter; return t; };
   const texGlow = radialTex([[0,'rgba(255,255,255,1)'],[0.25,'rgba(255,255,255,.55)'],[0.6,'rgba(255,255,255,.12)'],[1,'rgba(255,255,255,0)']]);
@@ -619,25 +620,25 @@ const field = (() => {
     const edge = new THREE.Mesh(new THREE.RingGeometry(PLAZA_R - .07, PLAZA_R + .07, 160), new THREE.MeshBasicMaterial({ color: COL.cyan, transparent: true, opacity: .45, side: THREE.DoubleSide })); edge.rotation.x = -Math.PI/2; edge.position.y = -0.01; scene.add(edge);
     const glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: texGlow, color: COL.ant, transparent: true, opacity: .12, blending: THREE.AdditiveBlending, depthWrite: false })); glow.scale.set(18,18,1); glow.position.y = .05; scene.add(glow); floorBits.push(disc, rim, edge, glow); }
   // 夜空：天顶深蓝，地平线一圈城市光污染的紫雾（跟随相机，不受 far 裁剪）
-  const sky = new THREE.Mesh(new THREE.SphereGeometry(400, 32, 16), new THREE.ShaderMaterial({ side: THREE.BackSide, depthWrite: false, fog: false, uniforms: { uTime: { value: 0 } },
+  const sky = new THREE.Mesh(new THREE.SphereGeometry(400, 32, 16), new THREE.ShaderMaterial({ side: THREE.BackSide, depthWrite: false, fog: false, uniforms: { uTime: { value: 0 }, uHaze },
     vertexShader: `varying vec3 vD; void main(){ vD=normalize(position); gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }`,
-    fragmentShader: `uniform float uTime; varying vec3 vD;
+    fragmentShader: `uniform float uTime; uniform vec3 uHaze; varying vec3 vD;
       float h21(vec2 p){ return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453); }
       float vn(vec2 p){ vec2 i=floor(p), f=fract(p); f=f*f*(3.0-2.0*f); return mix(mix(h21(i),h21(i+vec2(1,0)),f.x),mix(h21(i+vec2(0,1)),h21(i+vec2(1,1)),f.x),f.y); }
       float fbm(vec2 p){ float s=0.0, a=.5; for(int i=0;i<5;i++){ s+=a*vn(p); p*=2.03; a*=.5; } return s; }
-      void main(){ float h=vD.y; vec3 c=mix(vec3(.09,.035,.14),vec3(.008,.024,.06),smoothstep(-.02,.45,h));
-        c+=vec3(.0,.06,.08)*exp(-abs(h)*22.0)+vec3(.22,.05,.2)*exp(-max(h,0.0)*9.0)*.3;      // 地平线：城市霓虹光污染
+      void main(){ float h=vD.y; vec3 c=mix(uHaze*.5+vec3(.0,.0,.02),vec3(.008,.024,.06),smoothstep(-.02,.45,h));
+        c+=vec3(.0,.06,.08)*exp(-abs(h)*22.0)+uHaze*exp(-max(h,0.0)*9.0)*.45;      // 地平线：城市霓虹光污染
         vec2 uv=vD.xz/(max(h,0.0)+.12); float n=fbm(uv*.9+vec2(uTime*.006,0.0));            // 被城市从下方照亮的夜云
         float cl=smoothstep(.45,.85,n)*smoothstep(.02,.12,h)*(1.0-smoothstep(.5,.9,h));
-        c=mix(c,mix(vec3(.16,.07,.2),vec3(.05,.12,.2),fbm(uv*.4+3.1))*(.55+.6*exp(-h*4.0)),cl*.75);
+        c=mix(c,mix(uHaze*.8,vec3(.05,.12,.2),fbm(uv*.4+3.1))*(.55+.6*exp(-h*4.0)),cl*.75);
         gl_FragColor=vec4(c,1.0); }` }));
   sky.renderOrder = -2; scene.add(sky);
   // 湿地面：先把场景以 y=0 镜像渲染进 reflRT，地面按屏幕坐标采样——竖向拖拽模糊 + 水纹扰动 + 噪声水洼遮罩，
   // 即夜景照片里霓虹在柏油路上拉成长条倒影的效果；声波光环也画在这层
   let reflRT = null;
-  const groundMat = new THREE.ShaderMaterial({ fog: false, uniforms: { tRefl: { value: null }, uRes: { value: new THREE.Vector2(1,1) }, uTime: { value: 0 }, uFar: { value: 170 }, uWaves: { value: uWaves }, uWaveCol: { value: uWaveCol } },
+  const groundMat = new THREE.ShaderMaterial({ fog: false, uniforms: { uHaze, tRefl: { value: null }, uRes: { value: new THREE.Vector2(1,1) }, uTime: { value: 0 }, uFar: { value: 170 }, uWaves: { value: uWaves }, uWaveCol: { value: uWaveCol } },
     vertexShader: `varying vec3 vW; void main(){ vec4 w=modelMatrix*vec4(position,1.0); vW=w.xyz; gl_Position=projectionMatrix*viewMatrix*w; }`,
-    fragmentShader: `uniform sampler2D tRefl; uniform vec2 uRes; uniform float uTime,uFar; uniform vec4 uWaves[${MAX_WAVES}]; uniform vec3 uWaveCol[${MAX_WAVES}]; varying vec3 vW;
+    fragmentShader: `uniform vec3 uHaze; uniform sampler2D tRefl; uniform vec2 uRes; uniform float uTime,uFar; uniform vec4 uWaves[${MAX_WAVES}]; uniform vec3 uWaveCol[${MAX_WAVES}]; varying vec3 vW;
       float h21(vec2 p){ return fract(sin(dot(p,vec2(41.3,289.1)))*43758.5453); }
       float vn(vec2 p){ vec2 i=floor(p), f=fract(p); f=f*f*(3.0-2.0*f); return mix(mix(h21(i),h21(i+vec2(1,0)),f.x),mix(h21(i+vec2(0,1)),h21(i+vec2(1,1)),f.x),f.y); }
       void main(){ vec2 uv=gl_FragCoord.xy/uRes; float d=length(vW.xz);
@@ -649,34 +650,76 @@ const field = (() => {
         vec2 g=abs(fract(vW.xz*.5)-.5); c+=vec3(.015,.07,.09)*smoothstep(.47,.5,max(g.x,g.y))*(1.0-wet)*exp(-d*.04);
         c+=r*(.35+.6*wet);
         for(int i=0;i<${MAX_WAVES};i++){ vec4 w=uWaves[i]; if(w.w<=0.0) continue; float dd=distance(vW.xz,w.xy)-w.z; c+=uWaveCol[i]*exp(-dd*dd*3.0)*w.w*.22; }
-        c=mix(c,vec3(.06,.03,.1),smoothstep(uFar*.45,uFar,d)); gl_FragColor=vec4(c,1.0); }` });
+        c=mix(c,uHaze*.35,smoothstep(uFar*.45,uFar,d)); gl_FragColor=vec4(c,1.0); }` });
   const ground = new THREE.Mesh(new THREE.CircleGeometry(1, 96), groundMat); ground.rotation.x = -Math.PI/2; ground.position.y = -0.03; ground.renderOrder = -1; ground.scale.setScalar(170); scene.add(ground);
 
   // ============ 霓虹城市：摩天楼 + 广告牌 ============
   // 城市特征：token 名 → FNV-1a → 种子 → 依次抽特征（借鉴 Geometry Runners 的 trait 管线，代码自写）。同一个币永远是同一座城
   const fnv1a = s => { let h = 0x811c9dc5; for (const ch of s) { h ^= ch.codePointAt(0); h = Math.imul(h, 0x01000193); } return h >>> 0; };
   const mulberry32 = a => () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
-  const SCHEMES = [['洋红×青', ['#FF2BD6', '#2BF0FF']], ['青×紫', ['#2BF0FF', '#C21CFF']], ['洋红×霓虹红', ['#FF2BD6', '#FF2A3A']], ['青×钠灯黄', ['#2BF0FF', '#FFD23F']]];
   const SKYLINES = [['中央商务区', .5], ['中层街区', .3], ['尖塔群', .2]];
   let traits = null;
-  const SIGN_PAL = [['#FF2BD6', 17], ['#C21CFF', 8], ['#2B8CFF', 14], ['#2BF0FF', 12], ['#FFD23F', 16], ['#FF8A1F', 9], ['#3DFF8B', 12], ['#FF2A3A', 12]];
+  // ---- 城市原型（两层抽签的第一层）：文字/字体、配色、窗光色温、招牌形制、本地化标签。店名全部虚构，不用真实品牌 ----
+  const LOGOS = ['@BTC', '@ETH', '@SOL', '@DOGE', '@USDT'];
+  const CITIES = {
+    hk: { name: '香港', w: 30, haze: [.22, .06, .24],  font: '"Noto Sans TC"', win: [1, .7, .4], edge: [.35, .75], hang: .45, forms: [], adWord: '金行',
+      schemes: [['洋红×青', ['#FF2BD6', '#2BF0FF']], ['青×紫', ['#2BF0FF', '#C21CFF']], ['洋红×霓虹红', ['#FF2BD6', '#FF2A3A']], ['青×钠灯黄', ['#2BF0FF', '#FFD23F']]],
+      pal: [['#FF2BD6', 17], ['#C21CFF', 8], ['#2B8CFF', 14], ['#2BF0FF', 12], ['#FFD23F', 16], ['#FF8A1F', 9], ['#3DFF8B', 12], ['#FF2A3A', 12]],
+      vs: ['押', '茶餐廳', '周大昌金行', '永隆人壽', '找換', '跌打', '大藥房', '福記燒臘', '雲吞麵', '冰室', '麻雀館', '恆昌大押', '海鮮酒家', '時鐘酒店', '新華書局', '東昇表行', '涼茶', '粥麵', '中醫', '啟德機場', '紅磡', '夜總會', '金滿樓', '永利銀號', '旺角', 'HOTEL', 'KARAOKE', '蓮香', ...LOGOS],
+      zh: { BTC: '比特幣', ETH: '以太坊', SOL: 'SOLANA', DOGE: '狗狗幣', USDT: '泰達幣' },
+      L: { newOn: '新上麥 NEW', speaking: '發言中', onMic: '在麥', relay: '上麥', room: 'LIVE ROOM · 直播間', cart: '購物車', listen: 'LISTENING' } },
+    tokyo: { name: '東京', w: 20, haze: [.15, .15, .19],  font: '"Noto Sans JP"', win: [.82, .9, 1], edge: [.12, .35], hang: .75, forms: ['stack', 'roof'], adWord: '両替',
+      schemes: [['白×赤', ['#EEF4FF', '#FF2A3A']], ['赤×黄', ['#FF3B3B', '#FFD23F']], ['青×白', ['#2BF0FF', '#EEF4FF']]],
+      pal: [['#EEF4FF', 24], ['#FF2A3A', 20], ['#FFD23F', 18], ['#2BF0FF', 9], ['#3DFF8B', 8], ['#FF8A1F', 10], ['#FF2BD6', 7], ['#2B8CFF', 4]],
+      vs: ['居酒屋', 'ラーメン', 'カラオケ', '質屋', '焼肉', '寿司', '薬', '不動産', '喫茶', 'ホテル', '麻雀', 'たこ焼き', '定食', '整骨院', '漫画喫茶', '歯科', 'そば', '串カツ', '新宿', '渋谷', '秋葉原', '24時間', 'スナック', 'うどん', '占い', '古着', 'BAR', 'KARAOKE', ...LOGOS],
+      box: ['居酒屋 鳥吉', 'スナック 夢', 'カラオケ', '麻雀', '整体', 'バー 蘭', '焼鳥', '占い', '歯科', '英会話', '金券', '質', 'ラーメン', 'ネイル', '美容室', 'クラブ', 'うなぎ', '喫茶', '鍼灸', 'ダーツ', '中華', '雀荘', '居酒屋', '酒場'],
+      roof: ['東和商事', 'ネオン堂', '銀座会館', '大和不動産', '新宿会館'],
+      zh: { BTC: 'BTC', ETH: 'ETH', SOL: 'SOL', DOGE: 'DOGE', USDT: 'USDT' },
+      L: { newOn: '新登壇 ON AIR', speaking: '発言中', onMic: '登壇中', relay: '登壇', room: 'LIVE ROOM · 配信中', cart: 'カート', listen: '視聴中' } },
+    seoul: { name: '首爾', w: 18, haze: [.05, .12, .28],  font: '"Noto Sans KR"', win: [.86, .94, 1], edge: [.2, .5], hang: .35, forms: ['bands', 'cross'], adWord: '환전',
+      schemes: [['시안×핑크', ['#2BF0FF', '#FF2BD6']], ['화이트×레드', ['#EEF4FF', '#FF2A3A']], ['블루×핑크', ['#2B8CFF', '#FF6EC7']]],
+      pal: [['#EEF4FF', 20], ['#FF2A3A', 16], ['#2B8CFF', 14], ['#2BF0FF', 12], ['#FF6EC7', 14], ['#FFD23F', 12], ['#3DFF8B', 12]],
+      vs: ['노래방', '치킨', 'PC방', '약국', '부동산', '고깃집', '호프', '편의점', '모텔', '찜질방', '분식', '당구장', '안경', '치과', '떡볶이', '카페', '순대국', '미용실', '24시', '강남', '명동', '홍대', '포차', '빵집', 'BAR', 'HOTEL', ...LOGOS],
+      box: ['노래방', '치킨', 'PC방', '호프', '약국', '안경', '치과', '미용실', '부동산', '편의점', '당구장', '고기', '분식', '카페', '모텔', '학원', '네일', '피부과', '한의원', '족발', '국밥', '보쌈', '포차', '마트'],
+      zh: { BTC: 'BTC', ETH: 'ETH', SOL: 'SOL', DOGE: 'DOGE', USDT: 'USDT' },
+      L: { newOn: '새 발언자 NEW', speaking: '발언 중', onMic: '마이크 ON', relay: '등장', room: 'LIVE ROOM · 라이브', cart: '장바구니', listen: '청취 중' } },
+    ny: { name: '紐約', w: 17, haze: [.28, .14, .05],  font: '"Chakra Petch"', win: [1, .72, .42], edge: [.08, .25], hang: .8, forms: ['board'], adWord: 'DELI',
+      schemes: [['钨丝×彩屏', ['#FFB347', '#2B8CFF']], ['红×白', ['#FF2A3A', '#EEF4FF']], ['金×洋红', ['#FFD23F', '#FF2BD6']]],
+      pal: [['#FF2A3A', 20], ['#FFB347', 18], ['#EEF4FF', 16], ['#2B8CFF', 12], ['#FFD23F', 14], ['#3DFF8B', 8], ['#FF2BD6', 7], ['#2BF0FF', 5]],
+      vs: ['HOTEL', 'BAR', 'DELI', 'PIZZA', 'PAWN', 'DINER', 'LIQUORS', 'THEATRE', 'JAZZ', 'DRUGS', 'PARKING', 'BAGELS', 'TATTOO', 'LOUNGE', 'BOWLING', 'CINEMA', 'NOODLES', 'LAUNDRY', 'RECORDS', 'SALOON', 'GRILL', 'OPEN', 'CAFE', 'BOOKS', ...LOGOS],
+      board: [['THE NEON HEIST', 'NOW PLAYING · 8PM', '#FF2A3A', '#FFD23F'], ['TO THE MOON', '$TOKEN · LIVE ON ANT.FUN', '#2B8CFF', '#EEF4FF'], ['OPEN 24 HOURS', 'MIDTOWN DINER', '#FFD23F', '#FF2A3A'], ['WALL ST LIVE', 'PRICES · 24/7', '#3DFF8B', '#EEF4FF'], ['BROADWAY NIGHTS', 'TONIGHT ONLY', '#FF2BD6', '#FFD23F'], ['GM NEW YORK', 'WAGMI', '#FFB347', '#2B8CFF']],
+      zh: { BTC: 'BTC', ETH: 'ETH', SOL: 'SOL', DOGE: 'DOGE', USDT: 'USDT' },
+      L: { newOn: 'NOW ON STAGE', speaking: 'NOW SPEAKING', onMic: 'ON MIC', relay: 'ON STAGE', room: 'LIVE ROOM · ON AIR', cart: 'IN CART', listen: 'LISTENING' } },
+    sh: { name: '上海', w: 15, haze: [.27, .17, .04],  font: '"Noto Sans SC"', win: [1, .8, .5], edge: [.6, .9], hang: .45, forms: ['roof'], adWord: '金店',
+      schemes: [['金×红', ['#FFC857', '#FF2A3A']], ['金×青', ['#FFC857', '#2BF0FF']], ['红×洋红', ['#FF2A3A', '#FF2BD6']]],
+      pal: [['#FF2A3A', 22], ['#FFC857', 22], ['#2BF0FF', 12], ['#FF2BD6', 10], ['#3DFF8B', 10], ['#2B8CFF', 10], ['#EEF4FF', 8], ['#C21CFF', 6]],
+      vs: ['生煎', '小笼包', '饭店', '理发', '旗袍', '烟纸店', '点心', '茶楼', '照相馆', '钟表', '南货', '面馆', '黄鱼面', '绸布庄', '药房', '书局', '外滩', '南京路', '静安', '陆家嘴', '百货', '酒家', '咖啡馆', '浴室', 'KTV', 'HOTEL', ...LOGOS],
+      roof: ['金城大酒店', '申江饭店', '和兴百货', '海上书局', '东亚大楼'],
+      zh: { BTC: '比特币', ETH: '以太坊', SOL: 'SOLANA', DOGE: '狗狗币', USDT: '泰达币' },
+      L: { newOn: '新上麦 NEW', speaking: '发言中', onMic: '在麦', relay: '上麦', room: 'LIVE ROOM · 直播间', cart: '购物车', listen: 'LISTENING' } },
+  };
+  const CITY_KEYS = Object.keys(CITIES);
+  let SIGN_PAL = CITIES.hk.pal;
   const pickSign = r => { let u = r()*100; for (const [c, w] of SIGN_PAL) { if (u < w) return c; u -= w; } return SIGN_PAL[0][0]; };
-  function rollTraits(token) {
-    const r = mulberry32(fnv1a(token));
-    const [scheme, neon] = SCHEMES[Math.floor(4*Math.pow(r(), 1.5))];   // 幂偏置：默认配色更常见
+  function pickCity(token) { const r = mulberry32(fnv1a(token + '#city')), tot = CITY_KEYS.reduce((a, k) => a + CITIES[k].w, 0); let u = r()*tot;   // 按权重抽城市（独立种子）
+    for (const k of CITY_KEYS) { if (u < CITIES[k].w) return k; u -= CITIES[k].w; } return 'hk'; }
+  function rollTraits(token, cityKey) {
+    const key = CITIES[cityKey] ? cityKey : pickCity(token), C = CITIES[key], r = mulberry32(fnv1a(token));
+    SIGN_PAL = C.pal; FONT = `"Chakra Petch",${C.font},"Noto Sans SC",sans-serif`;
+    const [scheme, neon] = C.schemes[Math.floor(C.schemes.length*Math.pow(r(), 1.5))];   // 幂偏置：每城第一套配色更常见
     let u = r(), skyline = SKYLINES[0][0]; for (const [n, w] of SKYLINES) { if (u < w) { skyline = n; break; } u -= w; }
-    const mono = r() < .025, edgeRate = .35 + r()*.4;                     // 2.5% 稀有款：全城单色霓虹
-    return { token, scheme: mono ? '单色·' + scheme : scheme, neon: mono ? [neon[0]] : neon, skyline, edgeRate, rng: r };
+    const mono = r() < .025, edgeRate = C.edge[0] + r()*(C.edge[1] - C.edge[0]);       // 2.5% 稀有款：全城单色霓虹
+    return { token, city: key, C, scheme: mono ? '单色·' + scheme : scheme, neon: mono ? [neon[0]] : neon, skyline, edgeRate, rng: r };
   }
   // 楼体：一个 InstancedMesh 画全部楼。程序化窗格（亮窗比例 = 人气；Kuramoto 锁相越强各楼越同步呼吸）+ 棱边/屋顶霓虹灯管
-  const MAX_BLD = 160;
+  const MAX_BLD = 260;   /* 楼 + 退台/尖顶附加体 */
   const cityMat = new THREE.ShaderMaterial({
-    uniforms: { uLit: { value: .3 }, uSync: { value: 0 }, uPsi: { value: 0 }, uFlash: { value: new THREE.Color(0, 0, 0) } },
+    uniforms: { uLit: { value: .3 }, uSync: { value: 0 }, uPsi: { value: 0 }, uFlash: { value: new THREE.Color(0, 0, 0) }, uWin: { value: new THREE.Color(1, .7, .4) }, uHaze },
     vertexShader: `attribute vec3 aSize, aTint; attribute float aSeed, aEdge, aPh;
       varying vec3 vP, vN, vW, vSize, vTint; varying float vSeed, vEdge, vPh;
       void main(){ vP=position; vN=normal; vSize=aSize; vTint=aTint; vSeed=aSeed; vEdge=aEdge; vPh=aPh;
         vec4 w=modelMatrix*instanceMatrix*vec4(position,1.0); vW=w.xyz; gl_Position=projectionMatrix*viewMatrix*w; }`,
-    fragmentShader: `uniform vec3 uFlash; uniform float uLit,uSync,uPsi; varying vec3 vP, vN, vW, vSize, vTint; varying float vSeed, vEdge, vPh;
+    fragmentShader: `uniform vec3 uFlash,uWin,uHaze; uniform float uLit,uSync,uPsi; varying vec3 vP, vN, vW, vSize, vTint; varying float vSeed, vEdge, vPh;
       float h21(vec2 p){ return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453); }
       float tube(float d){ return (1.0-smoothstep(.1,.28,d))*2.4 + exp(-d*1.6)*.3; }   // 灯管：亮芯 + 贴墙光晕（世界单位）
       void main(){ vec3 c=vec3(.006,.012,.022); float neon=0.0;
@@ -687,7 +730,7 @@ const field = (() => {
           float h=h21(cell+vec2(vSeed*17.0,(vN.x+vN.z*2.0)*31.0)), k=h21(cell*1.7+vSeed);
           float pulse=.5+.5*sin(uPsi+(1.0-uSync)*vPh-cell.y*.22);
           float lit=step(1.0-(uLit+uSync*.12*pulse),h);
-          vec3 wc=k<.85?vec3(1.0,.7,.4):(k<.95?vec3(.3,.8,1.0):vec3(1.0,.3,.8));
+          vec3 wc=k<.85?uWin:(k<.95?vec3(.3,.8,1.0):vec3(1.0,.3,.8));
           c+=vec3(.0,.008,.016)*q.y;
           c+=win*(vec3(.008,.016,.03)+lit*wc*(.08+.26*fract(h*7.13))*(.6+uSync*.7*pulse)+uFlash*.35);
           float dc=(.5-(sx?abs(vP.z):abs(vP.x)))*(sx?vSize.z:vSize.x);     // 到竖向棱边的距离
@@ -696,25 +739,46 @@ const field = (() => {
           neon=tube(min((.5-abs(vP.x))*vSize.x,(.5-abs(vP.z))*vSize.z));  // 屋顶四边
         }
         c+=vTint*neon*vEdge;
-        c=mix(c,vec3(.05,.028,.085),1.0-exp(-length(vW-cameraPosition)*.006)); gl_FragColor=vec4(c,1.0); }` });
+        c=mix(c,uHaze*.3,1.0-exp(-length(vW-cameraPosition)*.006)); gl_FragColor=vec4(c,1.0); }` });
   const boxG = new THREE.BoxGeometry(1, 1, 1); boxG.translate(0, .5, 0);
   const iSize = new THREE.InstancedBufferAttribute(new Float32Array(MAX_BLD*3), 3), iTint = new THREE.InstancedBufferAttribute(new Float32Array(MAX_BLD*3), 3);
   const iSeed = new THREE.InstancedBufferAttribute(new Float32Array(MAX_BLD), 1), iEdge = new THREE.InstancedBufferAttribute(new Float32Array(MAX_BLD), 1), iPh = new THREE.InstancedBufferAttribute(new Float32Array(MAX_BLD), 1);
   boxG.setAttribute('aSize', iSize); boxG.setAttribute('aTint', iTint); boxG.setAttribute('aSeed', iSeed); boxG.setAttribute('aEdge', iEdge); boxG.setAttribute('aPh', iPh);
   const towers = new THREE.InstancedMesh(boxG, cityMat, MAX_BLD); towers.frustumCulled = false; scene.add(towers);
+  // 屋顶道具：纽约水塔（木桶 + 锥顶 + 支架）、上海金色尖锥
+  const tankGeo = new THREE.CylinderGeometry(1, 1, 1, 12), capGeo = new THREE.ConeGeometry(1, 1, 12), legGeo = new THREE.BoxGeometry(1, 1, 1), spireGeo = new THREE.ConeGeometry(1, 1, 8); spireGeo.translate(0, .5, 0);
+  const mkI = (geo, color, n = 24) => { const o = new THREE.InstancedMesh(geo, new THREE.MeshBasicMaterial({ color }), n); o.count = 0; o.frustumCulled = false; scene.add(o); return o; };
+  const tanks = mkI(tankGeo, 0x3a2a1f), tankCaps = mkI(capGeo, 0x2a1f18), tankLegs = mkI(legGeo, 0x161a20), spires = mkI(spireGeo, new THREE.Color(1.5, 1.05, .42), 16); let tankN = 0, spireN = 0;
   const city = new THREE.Group(); scene.add(city);   // 招牌/屏幕的挂点（每次进房按新城市重建）
-  let blds = [], tops = []; const beacons = [];
+  let blds = [], tops = [], aveAng = 0, sqAng = null; const beacons = [];
   const HEIGHTS = { '中央商务区': [r => 18 + Math.pow(r, 1.5)*46, r => 34 + Math.pow(r, 1.3)*80], '中层街区': [r => 14 + r*26, r => 22 + r*34], '尖塔群': [r => 16 + Math.pow(r, 3)*72, r => 30 + Math.pow(r, 3)*130] };
   function buildCity(tr) {
+    cityMat.uniforms.uWin.value.setRGB(...tr.C.win); uHaze.value.setRGB(...tr.C.haze); scene.fog.color.setRGB(tr.C.haze[0]*.25, tr.C.haze[1]*.25, tr.C.haze[2]*.25 + .03);   /* 窗光色温随城市：东京/首尔冷白荧光，纽约钨丝暖黄 */
     const r = tr.rng, [hIn, hOut] = HEIGHTS[tr.skyline], neon = tr.neon.map(c => new THREE.Color(c)), m = new THREE.Matrix4(), q = new THREE.Quaternion(), up = new THREE.Vector3(0, 1, 0), sc = new THREE.Vector3(), ps = new THREE.Vector3();
     blds = [];
-    const ave = r()*Math.PI*2, gap = (a, hw) => [0, 1, 2].some(k => Math.abs(Math.atan2(Math.sin(a - ave - k*2.0944), Math.cos(a - ave - k*2.0944))) < hw);   // 三条放射大街：透过缺口看到远方
-    const ring = (n, r0, r1, w0, w1, hf, inner, hw = 0) => { for (let i = 0; i < n; i++) { const a = i/n*Math.PI*2 + (r() - .5)*.12, rad = r0 + r()*(r1 - r0); if (hw && gap(a, hw)) continue;
-      blds.push({ a, rad, x: Math.cos(a)*rad, z: Math.sin(a)*rad, rotY: Math.atan2(-Math.cos(a), -Math.sin(a)), w: w0 + r()*(w1 - w0), d: w0 + r()*(w1 - w0), h: hf(r()), inner }); } };
-    ring(28, 46, 54, 7, 12, hIn, true, .26); ring(34, 68, 96, 9, 16, hOut, false, .13); ring(56, 105, 150, 10, 18, x => hOut(x)*.8, false);
+    const ave = r()*Math.PI*2; aveAng = ave; sqAng = tr.city === 'sh' ? ave + 2.0944*((r()*3)|0) : null;   /* 上海：装置所在方向清出一片广场 */
+    const sqGap = a => sqAng != null && Math.abs(Math.atan2(Math.sin(a - sqAng), Math.cos(a - sqAng))) < .62;
+    const gap = (a, hw) => [0, 1, 2].some(k => Math.abs(Math.atan2(Math.sin(a - ave - k*2.0944), Math.cos(a - ave - k*2.0944))) < hw);   // 三条放射大街：透过缺口看到远方
+    const ring = (n, r0, r1, w0, w1, hf, inner, hw = 0, d0 = w0, d1 = w1, slab = false) => { for (let i = 0; i < n; i++) { const a = i/n*Math.PI*2 + (r() - .5)*.12, rad = r0 + r()*(r1 - r0); if (hw && gap(a, hw)) continue; if (rad < 100 && sqGap(a)) continue;
+      blds.push({ a, rad, x: Math.cos(a)*rad, z: Math.sin(a)*rad, rotY: Math.atan2(-Math.cos(a), -Math.sin(a)), w: w0 + r()*(w1 - w0), d: d0 + r()*(d1 - d0), h: hf(r()), inner, slab }); } };
+    if (tr.city === 'tokyo') ring(42, 45, 54, 4.6, 8.5, x => hIn(x)*.9, true, .26); else ring(28, 46, 54, 7, 12, hIn, true, .26);   /* 东京：内圈窄楼加密（杂居楼） */ if (tr.city === 'seoul') ring(20, 70, 92, 18, 25, x => 26 + x*20, false, .13, 4.5, 6.5, true); else ring(34, 68, 96, 9, 16, hOut, false, .13);   /* 首尔：中圈板式公寓 */ ring(56, 105, 150, 10, 18, x => hOut(x)*.8, false);
     blds.forEach((b, i) => { q.setFromAxisAngle(up, b.rotY); m.compose(ps.set(b.x, 0, b.z), q, sc.set(b.w, b.h, b.d)); towers.setMatrixAt(i, m);
       iSize.setXYZ(i, b.w, b.h, b.d); const t = r() < .5 ? neon[(r()*neon.length)|0] : new THREE.Color(pickSign(r)); /* 一半主配色，一半常规招牌色 */ iTint.setXYZ(i, t.r, t.g, t.b); iSeed.setX(i, r()*10); iEdge.setX(i, r() < tr.edgeRate ? 1 : 0); iPh.setX(i, r()*6.2832); });
-    towers.count = blds.length; towers.instanceMatrix.needsUpdate = iSize.needsUpdate = iTint.needsUpdate = iSeed.needsUpdate = iEdge.needsUpdate = iPh.needsUpdate = true;
+    // ---- 楼形附加体（同一 InstancedMesh）：纽约退台式楼顶；上海装饰艺术尖顶的基座 ----
+    let ex = blds.length; const put = (b, w, h, d, y0, t) => { if (ex >= MAX_BLD) return; q.setFromAxisAngle(up, b.rotY); m.compose(ps.set(b.x, y0, b.z), q, sc.set(w, h, d)); towers.setMatrixAt(ex, m);
+      iSize.setXYZ(ex, w, h, d); iTint.setXYZ(ex, t.r, t.g, t.b); iSeed.setX(ex, r()*10); iEdge.setX(ex, 1); iPh.setX(ex, r()*6.2832); ex++; };
+    const tintOf = i => new THREE.Color(iTint.getX(i), iTint.getY(i), iTint.getZ(i));
+    tankN = spireN = 0;
+    if (tr.city === 'ny') blds.forEach((b, i) => { if (b.h > 30 && b.w > 8 && r() < .75) { const t = tintOf(i), h1 = b.h*.16, h2 = b.h*.11;   // 退台：两级收窄
+      put(b, b.w*.72, h1, b.d*.72, b.h, t); put(b, b.w*.46, h2, b.d*.46, b.h + h1, t); if (r() < .5) put(b, b.w*.2, b.h*.1, b.d*.2, b.h + h1 + h2, t); } });
+    if (tr.city === 'sh') blds.slice().sort((p2, q2) => q2.h - p2.h).slice(0, 10).forEach(b => { const i = blds.indexOf(b), h1 = b.h*.1;   // 装饰艺术尖顶：一级基座 + 金色尖锥
+      put(b, b.w*.62, h1, b.d*.62, b.h, tintOf(i)); if (spireN < 16) { m.compose(ps.set(b.x, b.h + h1, b.z), q.setFromAxisAngle(up, b.rotY), sc.set(b.w*.16, b.h*.32, b.w*.16)); spires.setMatrixAt(spireN++, m); } });
+    if (tr.city === 'ny') blds.filter(b => b.h > 12 && b.h < 48 && b.rad < 110).sort(() => r() - .5).slice(0, 18).forEach(b => {   // 屋顶木制水塔
+      const ox = (r() - .5)*b.w*.5, oz = (r() - .5)*b.d*.5, cos = Math.cos(b.rotY), sin = Math.sin(b.rotY), x = b.x + ox*cos + oz*sin, z = b.z - ox*sin + oz*cos, top = b.h + (b.extraTop || 0);
+      m.compose(ps.set(x, top + 1.1, z), q.identity(), sc.set(1.4, 2.6, 1.4)); tanks.setMatrixAt(tankN, m); m.compose(ps.set(x, top + 3.7, z), q.identity(), sc.set(1.65, 1.1, 1.65)); tankCaps.setMatrixAt(tankN, m);
+      m.compose(ps.set(x, top + .55, z), q.identity(), sc.set(1.2, 1.1, 1.2)); tankLegs.setMatrixAt(tankN++, m); });
+    tanks.count = tankCaps.count = tankLegs.count = tankN; spires.count = spireN; [tanks, tankCaps, tankLegs, spires].forEach(o => { o.instanceMatrix.needsUpdate = true; });
+    towers.count = ex; towers.instanceMatrix.needsUpdate = iSize.needsUpdate = iTint.needsUpdate = iSeed.needsUpdate = iEdge.needsUpdate = iPh.needsUpdate = true;
     tops = blds.slice().sort((p, q2) => q2.h - p.h).slice(0, 24).map(b => new THREE.Vector3(b.x, b.h + 1, b.z));
   }
   // 画布工具：霓虹灯管字（多层 shadow 发光 + 白芯）
@@ -730,10 +794,10 @@ const field = (() => {
   const scan = (g, w, h) => { g.fillStyle = 'rgba(0,0,0,.22)'; for (let y = 0; y < h; y += 3) g.fillRect(0, y, w, 1); };   // 屏幕扫描线
   const addMat = (t) => new THREE.MeshBasicMaterial({ map: t, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, fog: false });
   const scrMat = (t) => new THREE.MeshBasicMaterial({ map: t, fog: false });
-  function mountPlane(b, mat, pw, ph, x, y, z = b.d/2 + .2) { const m = new THREE.Mesh(new THREE.PlaneGeometry(pw, ph), mat); m.position.set(x, y, z); b.grp.add(m); return m; }
+  function mountPlane(b, mat, pw, ph, x, y, z = b.d/2 + .2) { const m = new THREE.Mesh(new THREE.PlaneGeometry(pw, ph), mat); m.position.set(x, y, z); b.grp.add(m); if (z > 0) b.occLow = Math.min(b.occLow == null ? 1e9 : b.occLow, y - ph/2); return m; }   /* occLow：正面被占用的最低高度，城市招牌只用它下方的楼层 */
   const signs = [], screens = [];
   // ---- 研发传入的房间信息（setRoomInfo）：名字 / 标题 / 购物车 token（[0] 为主币，决定城市种子）/ 上麦的人 ----
-  const info = { name: '', title: '', tokens: ['ANTFUN'] }; let tokIdx = 0, tokT = 0;
+  const info = { name: '', title: '', tokens: ['ANTFUN'], city: null };   /* city：研发覆盖城市原型（hk/tokyo/seoul/ny/sh），null 则按主币哈希抽 */ let tokIdx = 0, tokT = 0;
   const mainTok = () => info.tokens[0];
   // 1) 主塔屋顶巨型招牌：房间绑定的 token 名 + 实时价格
   const coinSign = cnv(1024, 512);
@@ -743,7 +807,7 @@ const field = (() => {
     neon(g, '$' + coin, 512, 210, fitSize(g, '$' + coin, 860, 220), '#FF2BD6');
     if (cp) neon(g, `$${cp < 1 ? cp.toPrecision(4) : cp.toLocaleString(undefined, { maximumFractionDigits: 0 })}${isMain ? `  ${up ? '▲' : '▼'} ${Math.abs(ch).toFixed(2)}%` : ''}`, 512, 395, 70, up ? '#2BF0FF' : '#FF2A3A', { tube: false, weight: 600 });
     else neon(g, 'IN CART', 512, 395, 70, '#2BF0FF', { tube: false, weight: 600 });
-    if (info.tokens.length > 1) neon(g, `購物車 ${tokIdx % info.tokens.length + 1}/${info.tokens.length}`, 512, 74, 34, '#FFD23F', { tube: false, weight: 600 });
+    if (info.tokens.length > 1) neon(g, `${traits ? traits.C.L.cart : 'CART'} ${tokIdx % info.tokens.length + 1}/${info.tokens.length}`, 512, 74, 34, '#FFD23F', { tube: false, weight: 600 });
     t.needsUpdate = true;
   }
   // 2) K 线大屏：直接用右栏同一条价格序列
@@ -793,7 +857,7 @@ const field = (() => {
     t.needsUpdate = true;
   }
   // 6) 其他楼面的横广告：币种标志（BTC/ETH/SOL/DOGE/USDT）+ 加密黑话
-  const ADS = ['@BTC', '@ETH', '@SOL', '@DOGE', '@USDT', '金行', 'HODL', 'WAGMI'];   /* '@' 开头 = 币种标志广告 */
+  const ADS = ['@BTC', '@ETH', '@SOL', '@DOGE', '@USDT', '金行', 'HODL', 'WAGMI'];   /* '金行' 位置由城市 adWord 替换 */   /* '@' 开头 = 币种标志广告 */
   // 币种标志（画布手绘，不加载外部图片）：比特币橙圆+斜 B、以太坊蓝紫圆+八面体、Solana 三条渐变斜条
   const LOGO = { BTC: { c: '#F7931A', name: 'BITCOIN', zh: '比特幣' }, ETH: { c: '#7B93F5', name: 'ETHEREUM', zh: '以太坊' }, SOL: { c: '#14F195', name: 'SOLANA', zh: 'SOLANA' }, DOGE: { c: '#C2A633', name: 'DOGECOIN', zh: '狗狗幣' }, USDT: { c: '#26A17B', name: 'TETHER', zh: '泰達幣' } };
   function drawLogo(g, k, cx, cy, R) {
@@ -813,20 +877,20 @@ const field = (() => {
     g.restore();
   }
   const ads = Array.from({ length: 8 }, () => cnv(512, 256));
-  function drawAds() { ads.forEach((a, i) => { const { g, t } = a, txt = ADS[i % ADS.length], col = SIGN_PAL[(i*3 + 1) % SIGN_PAL.length][0]; g.clearRect(0, 0, 512, 256);
+  function drawAds() { ads.forEach((a, i) => { const { g, t } = a, txt0 = ADS[i % ADS.length], txt = txt0 === '金行' && traits ? traits.C.adWord : txt0, col = SIGN_PAL[(i*3 + 1) % SIGN_PAL.length][0]; g.clearRect(0, 0, 512, 256);
     if (txt[0] === '@') { const L = LOGO[txt.slice(1)]; g.save(); g.shadowColor = L.c; g.shadowBlur = 16; g.strokeStyle = L.c; g.lineWidth = 5; g.strokeRect(16, 16, 480, 224); g.restore();
       drawLogo(g, txt.slice(1), 112, 128, 70); neon(g, L.name, 330, 130, fitSize(g, L.name, 260, 90), L.c, { tube: false }); t.needsUpdate = true; return; }
     if (i % 2) { g.save(); g.shadowColor = col; g.shadowBlur = 16; g.strokeStyle = col; g.lineWidth = 5; g.strokeRect(16, 16, 480, 224); g.restore(); }
     neon(g, txt, 256, 130, fitSize(g, txt, 420, 150), col); t.needsUpdate = true; }); }
   // 7) 竖向挂牌：一张 2048×1536 图集切 48 格（每格 128×512），一种材质画完全部；霓虹灯管字 / 灯箱字两种样式
   // 港式街招：繁体 + 行业招牌 + 虚构店名（不用真实品牌，避免商标问题）
-  const VS_TXT = ['押', '茶餐廳', '周大昌金行', '永隆人壽', '找換', '跌打', '大藥房', '福記燒臘', '雲吞麵', '冰室', '麻雀館', '恆昌大押', '海鮮酒家', '時鐘酒店', '新華書局', '東昇表行', '涼茶', '粥麵', '中醫', '啟德機場', '紅磡', '夜總會', '@BTC', '金滿樓', '永利銀號', '旺角', 'HOTEL', '@ETH', 'KARAOKE', '@SOL', '蓮香', '@DOGE', '@USDT'];
+  const VS_TXT = () => (traits ? traits.C : CITIES.hk).vs;   /* 竖招文字随城市（港式繁体 / 日文 / 韩文 / 英文 / 简体） */
   const vsAtlas = cnv(2048, 1536), vsMat = new THREE.MeshBasicMaterial({ map: vsAtlas.t, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, fog: false, side: THREE.DoubleSide });
   function drawVSigns(r) {
-    const { g, t } = vsAtlas, txts = VS_TXT.slice(); for (let i = txts.length - 1; i > 0; i--) { const j = (r()*(i + 1))|0; [txts[i], txts[j]] = [txts[j], txts[i]]; }
+    const { g, t } = vsAtlas, txts = VS_TXT().slice(); for (let i = txts.length - 1; i > 0; i--) { const j = (r()*(i + 1))|0; [txts[i], txts[j]] = [txts[j], txts[i]]; }
     info.tokens.slice(0, 4).forEach((tk, j) => { txts[j] = '$' + tk; });   /* 购物车 token 上竖招牌 */ g.clearRect(0, 0, 2048, 1536);
     txts.forEach((txt, i) => { const x0 = (i % 16)*128, y0 = Math.floor(i/16)*512, col = pickSign(r), box = r() < .45, chars = [...txt], size = Math.min(88, 440/chars.length);
-      if (txt[0] === '@') { const k = txt.slice(1), L = LOGO[k], zc = [...L.zh], zs = Math.min(70, 330/zc.length);
+      if (txt[0] === '@') { const k = txt.slice(1), L = LOGO[k], zc = [...((traits ? traits.C : CITIES.hk).zh[k])], zs = Math.min(70, 330/zc.length);
         g.save(); g.beginPath(); g.rect(x0, y0, 128, 512); g.clip(); g.shadowColor = L.c; g.shadowBlur = 14; g.strokeStyle = L.c; g.lineWidth = 4; g.strokeRect(x0 + 14, y0 + 14, 100, 484); g.restore();
         drawLogo(g, k, x0 + 64, y0 + 84, 44); zc.forEach((ch, j) => neon(g, ch, x0 + 64, y0 + 310 + (j - (zc.length - 1)/2)*zs*1.05, zs*.9, L.c, { tube: false })); return; }
       g.save(); g.beginPath(); g.rect(x0, y0, 128, 512); g.clip();
@@ -995,7 +1059,91 @@ const field = (() => {
       g.fillStyle = 'rgba(0,0,0,.55)'; g.fillRect(ox, oy + 210, 74, 28); neon(g, '#' + pk.id, ox + 8, oy + 224, 18, '#E6F1F7', { tube: false, align: 'left', weight: 600 }); });
     scan(g, 512, 512); t.needsUpdate = true;
   }
-  // 10) Fidenza 风格流场巨幕（自写算法，非 Tyler Hobbs 原码）：值噪声角度场 + 不相交粗细色带，币名做种子，每个币一张
+  // 10) 城市艺术巨幕：香港/上海 = Fidenza 风格流场；东京 = 浮世绘；纽约/首尔 = Ringers 风格钉绳（均为自写算法，币名做种子，每个币一张）
+  const RINGER_PAL = { ny: { bg: '#F3F1EC', rope: '#1B1B1D', fill: ['#C3423F', '#4381C1', '#F2C945'], peg: '#1B1B1D', hi: '#F2C945' },
+                       seoul: { bg: '#EAE2D0', rope: '#1F2A44', fill: ['#2E8B7A', '#D9472B', '#E8B33A', '#2F4FA0'], peg: '#1F2A44', hi: '#D9472B' } };
+  function drawRingers(r, P) {                                                     // 钉阵 + 绳圈：钉按格点或二级细分布点，取子集按绕质心角排序，绳在凸钉外侧、凹钉内侧缠绕
+    const { g, t } = flowScr, W = 640, H = 800, M = 70; g.fillStyle = P.bg; g.fillRect(0, 0, W, H);
+    const pegs = [], n = 3 + ((r()*3)|0), m = Math.round(n*1.25), sub = r() < .3;
+    for (let i = 0; i < n; i++) for (let j = 0; j < m; j++) { const x = M + (W - 2*M)*(n === 1 ? .5 : i/(n - 1)), y = M + (H - 2*M)*(j/(m - 1)), rr = 18 + r()*16;
+      if (sub && r() < .3) { for (const [dx, dy] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) pegs.push({ x: x + dx*rr*1.3, y: y + dy*rr*1.3, r: rr*.45 }); } else pegs.push({ x, y, r: rr }); }
+    for (let i = pegs.length - 1; i > 0; i--) { const j = (r()*(i + 1))|0; [pegs[i], pegs[j]] = [pegs[j], pegs[i]]; }
+    const k = Math.max(4, Math.round(pegs.length*(.45 + r()*.3))), ring = pegs.slice(0, k), rest = pegs.slice(k);
+    const cx = ring.reduce((a, p) => a + p.x, 0)/k, cy = ring.reduce((a, p) => a + p.y, 0)/k + (r() < .4 ? 60 : 0);
+    ring.sort((a, b) => Math.atan2(a.y - cy, a.x - cx) - Math.atan2(b.y - cy, b.x - cx));
+    const N = ring.length; ring.forEach((p, i) => { const a = ring[(i + N - 1) % N], b = ring[(i + 1) % N]; p.s = ((p.x - a.x)*(b.y - p.y) - (p.y - a.y)*(b.x - p.x)) >= 0 ? 1 : -1; });   // 凸 +1 / 凹 -1
+    const tan = (A, B) => { const dx = B.x - A.x, dy = B.y - A.y, L = Math.hypot(dx, dy), ux = dx/L, uy = dy/L, R1 = A.s*A.r, R2 = B.s*B.r, kk = Math.max(-1, Math.min(1, (R1 - R2)/L)), q = Math.sqrt(1 - kk*kk);
+      const nx = kk*ux + q*uy, ny = kk*uy - q*ux; return [[A.x + R1*nx, A.y + R1*ny], [B.x + R2*nx, B.y + R2*ny]]; };   // 带符号半径的双圆公切线
+    const segs = ring.map((p, i) => tan(p, ring[(i + 1) % N]));
+    const path = () => { g.beginPath(); ring.forEach((p, i) => { const inn = segs[(i + N - 1) % N][1], out = segs[i][0], a0 = Math.atan2(inn[1] - p.y, inn[0] - p.x), a1 = Math.atan2(out[1] - p.y, out[0] - p.x);
+      if (i === 0) g.moveTo(inn[0], inn[1]); g.arc(p.x, p.y, p.r, a0, a1, p.s < 0); g.lineTo(segs[i][1][0], segs[i][1][1]); }); g.closePath(); };
+    if (r() < .55) { path(); g.fillStyle = P.fill[(r()*P.fill.length)|0]; g.fill('evenodd'); }   // 一半作品填色
+    g.lineJoin = 'round'; g.lineWidth = 9; g.strokeStyle = P.rope; path(); g.stroke();
+    const hi = (r()*pegs.length)|0; pegs.forEach((p, i) => { g.fillStyle = i === hi ? P.hi : P.peg; g.beginPath(); g.arc(p.x, p.y, ring.includes(p) ? Math.max(5, p.r*.35) : 5, 0, 7); g.fill(); });   // 单钉高亮
+    for (let i = 0; i < 7000; i++) { g.fillStyle = `rgba(40,30,20,${(r()*.05).toFixed(3)})`; g.fillRect(r()*W, r()*H, 1.2, 1.2); }
+    g.fillStyle = 'rgba(0,0,0,.07)'; for (let y = 0; y < H; y += 3) g.fillRect(0, y, W, 1); t.needsUpdate = true;
+  }
+  function drawUkiyoe(r) {                                                          // 浮世绘：米纸 + 天空晕染 + 红日 + 富士 + 卷浪与浪尖浪花 + 套色错位 + 题签与朱印（构图随币变化）
+    const { g, t } = flowScr, W = 640, H = 800, AI = '#1F3A6B', AI2 = '#5F82AE', SUMI = '#1B2433', CREAM = '#EFE3C8', SHU = '#C9432C', FOAM = '#F7F1E4';
+    g.fillStyle = CREAM; g.fillRect(0, 0, W, H);
+    const sky = g.createLinearGradient(0, 0, 0, 160 + r()*120); sky.addColorStop(0, r() < .3 ? '#7A2E2E' : AI); sky.addColorStop(1, 'rgba(31,58,107,0)'); g.fillStyle = sky; g.fillRect(0, 0, W, 300);   // ぼかし（30% 夕焼け）
+    const dir = r() < .5 ? 1 : -1, horizon = 500 + r()*90;
+    const sx = dir > 0 ? 110 + r()*200 : 330 + r()*200,   /* 太阳在题签对侧 */ sy = 130 + r()*170, sr = 36 + r()*34; g.fillStyle = SHU; g.beginPath(); g.arc(sx, sy, sr, 0, 7); g.fill();
+    const fx = dir > 0 ? 300 + r()*240 : 100 + r()*240, fw = 90 + r()*110, fh = fw*(.75 + r()*.35), fy = horizon + 10;      // 富士：大小位置随机
+    g.fillStyle = AI; g.beginPath(); g.moveTo(fx - fw, fy); g.lineTo(fx - fw*.16, fy - fh); g.lineTo(fx + fw*.16, fy - fh); g.lineTo(fx + fw, fy); g.closePath(); g.fill();
+    g.fillStyle = FOAM; g.beginPath(); g.moveTo(fx - fw*.16, fy - fh); g.lineTo(fx + fw*.16, fy - fh); const sn = fh*.3; for (let i = 0; i <= 6; i++) g.lineTo(fx + fw*(.16 + .3*sn/fh) - i*(fw*(.32 + .6*sn/fh))/6, fy - fh + sn + (i % 2 ? sn*.35 : 0)); g.closePath(); g.fill();
+    const CREST = [[-60, 260], [-40, 120], [40, 20], [170, 0], [250, -12], [300, 40], [280, 100]];
+    const bez = (p0, p1, p2, p3, u) => { const v = 1 - u; return [v*v*v*p0[0] + 3*v*v*u*p1[0] + 3*v*u*u*p2[0] + u*u*u*p3[0], v*v*v*p0[1] + 3*v*v*u*p1[1] + 3*v*u*u*p2[1] + u*u*u*p3[1]]; };
+    const wave = (x0, y0, s, col, foam) => { g.save(); g.translate(x0, y0); g.scale(dir*s, s); g.fillStyle = col; g.beginPath(); g.moveTo(...CREST[0]); g.bezierCurveTo(...CREST[1], ...CREST[2], ...CREST[3]); g.bezierCurveTo(...CREST[4], ...CREST[5], ...CREST[6]);
+      g.bezierCurveTo(250, 60, 200, 60, 180, 110); g.bezierCurveTo(160, 160, 220, 200, 260, 190); g.bezierCurveTo(200, 260, 100, 230, 60, 300); g.lineTo(-60, 300); g.closePath(); g.fill();
+      if (foam) { g.fillStyle = FOAM; for (let i = 0; i <= 22; i++) { const u = i/22, [px, py] = u < .45 ? bez(CREST[0], CREST[1], CREST[2], CREST[3], .55 + u) : bez(CREST[3], CREST[4], CREST[5], CREST[6], (u - .45)/.55);   // 浪花爪：沿浪尖曲线
+        g.beginPath(); g.arc(px, py - 4, 6 + 5*Math.abs(Math.sin(i*1.7)), 0, 7); g.fill(); if (i % 3 === 0) { g.beginPath(); g.arc(px + 10, py - 16, 4, 0, 7); g.fill(); } } }
+      g.restore(); };
+    const bx = dir > 0 ? -20 + r()*80 : W + 20 - r()*80, by = horizon - 40 + r()*60, bs = 1.0 + r()*.5;
+    g.save(); g.translate(3, 2); wave(bx, by, bs, AI2, false); g.restore(); wave(bx, by, bs, AI, true);                    // 套色错位：浅蓝版偏 3px
+    if (r() < .7) wave(bx + dir*(140 + r()*120), by + 70 + r()*40, .45 + r()*.35, AI2, true);                               // 小浪
+    const gap = 20 + r()*14, amp = 6 + r()*7; g.fillStyle = AI; for (let y = horizon + 80; y < H; y += gap) { g.beginPath(); for (let x = 0; x <= W; x += 8) g.lineTo(x, y + amp*Math.sin(x*.035 + y)); g.lineTo(W, H); g.lineTo(0, H); g.closePath(); g.globalAlpha = .5; g.fill(); } g.globalAlpha = 1;
+    g.strokeStyle = SUMI; g.lineWidth = 2; for (let y = horizon + 80; y < H; y += gap) { g.beginPath(); for (let x = 0; x <= W; x += 8) g.lineTo(x, y + amp*Math.sin(x*.035 + y)); g.stroke(); }
+    const title = `${mainTok()}沖浪裏`, tx = dir > 0 ? W - 70 : 70; g.fillStyle = FOAM; g.strokeStyle = SUMI; g.lineWidth = 2; g.fillRect(tx - 24, 40, 48, 30 + [...title].length*34); g.strokeRect(tx - 24, 40, 48, 30 + [...title].length*34);   // 题签
+    g.fillStyle = SUMI; g.font = `700 28px "Noto Sans JP",serif`; g.textAlign = 'center'; g.textBaseline = 'middle'; [...title].forEach((ch, i) => g.fillText(ch, tx, 70 + i*34));
+    g.fillStyle = SHU; g.fillRect(tx - 16, 60 + [...title].length*34, 32, 32); g.fillStyle = CREAM; g.font = `700 18px "Noto Sans JP",serif`; g.fillText('印', tx, 76 + [...title].length*34);   // 朱印
+    for (let i = 0; i < 9000; i++) { g.fillStyle = `rgba(80,60,30,${(r()*.06).toFixed(3)})`; g.fillRect(r()*W, r()*H, 1.3, 1.3); }   // 和纸纤维
+    g.fillStyle = 'rgba(0,0,0,.07)'; for (let y = 0; y < H; y += 3) g.fillRect(0, y, W, 1); t.needsUpdate = true;
+  }
+  // 上海：巨幅 Squiggle 风格动画（向 Snowfro《Chromie Squiggle》致敬；自写代码，原作非公开授权）—— 点串彩虹波浪线，起伏由币名决定，色相持续流动
+  const sqScr = cnv(1200, 800), sqMat = scrMat(sqScr.t); let sq = null;
+  function makeSquiggle(r) { const n = 12 + ((r()*9)|0), amp = .18 + r()*.22, pts = Array.from({ length: n + 3 }, () => (r()*2 - 1)*amp);
+    return { pts, n, spread: r() < .06 ? .5 : 1.2 + r()*4, start: r()*360, rev: r() < .3, bold: r() < .14, slinky: r() < .12 }; }   // 少数稀有款：超密彩虹 / 粗线 / 空心
+  function drawSquiggle(t) { if (!sq) return; const { g, t: tex } = sqScr, W = 1200, H = 800, { pts, n } = sq, cr = (p0, p1, p2, p3, u) => .5*((2*p1) + (-p0 + p2)*u + (2*p0 - 5*p1 + 4*p2 - p3)*u*u + (-p0 + 3*p1 - 3*p2 + p3)*u*u*u);
+    g.fillStyle = '#05060a'; g.fillRect(0, 0, W, H); const steps = 46, R = (sq.bold ? 34 : 22), breathe = 1 + .12*Math.sin(t*1.3)*(.4 + syncR); let k = 0;
+    for (let j = 0; j < n; j++) for (let i = 0; i < steps; i++) { const u = i/steps, x = 70 + (W - 140)*(j + u)/n, y = H/2 + cr(pts[j], pts[j + 1], pts[j + 2], pts[j + 3], u)*H*breathe;
+      const hue = ((sq.rev ? -1 : 1)*k*sq.spread + sq.start + t*90) % 360; k++;
+      g.fillStyle = `hsl(${(hue + 360) % 360},95%,58%)`; g.beginPath(); g.arc(x, y, R, 0, 7);
+      if (sq.slinky && j && j < n - 1) { g.strokeStyle = g.fillStyle; g.lineWidth = 3; g.stroke(); } else g.fill(); }
+    g.fillStyle = 'rgba(0,0,0,.18)'; for (let y = 0; y < H; y += 3) g.fillRect(0, y, W, 1); tex.needsUpdate = true; }
+  // 上海：巨型 Squiggle 装置（向 Snowfro《Chromie Squiggle》致敬，自写代码）——一整根发光软管从广场地面拔起、在楼群上空起伏，触地处有光池，彩虹沿管流动
+  const sqTubeMat = new THREE.ShaderMaterial({ fog: false, uniforms: { uTime: { value: 0 }, uCyc: { value: 2 }, uDir: { value: 1 }, uGain: { value: .9 } },
+    vertexShader: `varying vec2 vUv; varying vec3 vN, vV; void main(){ vUv=uv; vec4 mv=modelViewMatrix*vec4(position,1.0); vN=normalize(normalMatrix*normal); vV=normalize(-mv.xyz); gl_Position=projectionMatrix*mv; }`,
+    fragmentShader: `uniform float uTime,uCyc,uDir,uGain; varying vec2 vUv; varying vec3 vN, vV;
+      vec3 hsv(float h){ vec3 k=clamp(abs(mod(h*6.0+vec3(0.,4.,2.),6.)-3.)-1.,0.,1.); return k; }
+      void main(){ float h=fract(vUv.x*uCyc*uDir - uTime*.08); vec3 c=hsv(h); float f=max(dot(vN,vV),0.0);
+        c=mix(c,vec3(1.0),.12); c*= .45 + .7*f; c+= hsv(h)*pow(1.0-f,2.0)*.45; gl_FragColor=vec4(c*uGain,1.0); }` });
+  const sqRig = new THREE.Group(); scene.add(sqRig); let sqOn = false;
+  function buildSquiggleRig(r) {
+    sqRig.children.slice().forEach(o => { o.geometry.dispose(); sqRig.remove(o); });
+    const c0 = sqAng != null ? sqAng : aveAng, span = 1.05, n = 7 + ((r()*4)|0), pts = [], lows = [];   // 内圈与中圈之间的空环带（r≈61），正对一条放射大街
+    for (let i = 0; i < n; i++) { const u = i/(n - 1), low = i % 2 === 0, y = low ? 1.2 : 42 + r()*38, a = c0 + (u - .5)*span, rr = 66 + (r() - .5)*10;   // 高低交替：低点触地，高点冲出楼顶
+      const p = new THREE.Vector3(Math.cos(a)*rr, y, Math.sin(a)*rr); pts.push(p); if (low) lows.push(p); }
+    const curve = new THREE.CatmullRomCurve3(pts, false, 'centripetal'), R = 2.4 + r()*.8;
+    sqRig.add(new THREE.Mesh(new THREE.TubeGeometry(curve, 700, R, 18, false), sqTubeMat));
+    [pts[0], pts[pts.length - 1]].forEach(p => { const cap = new THREE.Mesh(new THREE.SphereGeometry(R, 18, 12), sqTubeMat); cap.position.copy(p); sqRig.add(cap); });   // 圆头
+    lows.forEach(p => { const pool = new THREE.Mesh(new THREE.CircleGeometry(R*3.2, 40), new THREE.MeshBasicMaterial({ map: texGlow, color: 0xfff2cc, transparent: true, opacity: .55, blending: THREE.AdditiveBlending, depthWrite: false, fog: false }));
+      pool.rotation.x = -Math.PI/2; pool.position.set(p.x, .06, p.z); sqRig.add(pool); });   // 触地光池
+    sqTubeMat.uniforms.uCyc.value = 1.5 + r()*2.5; sqTubeMat.uniforms.uDir.value = r() < .5 ? 1 : -1; sqRig.visible = sqOn = true;
+  }
+  function stepSquiggleRig(t) { if (!sqOn) return; sqTubeMat.uniforms.uTime.value = t; sqTubeMat.uniforms.uGain.value = .85 + .2*syncR; }
+  function hideSquiggleRig() { sqOn = false; sqRig.visible = false; }
+  function drawArtWall(r) { hideSquiggleRig(); const c = traits.city; sq = null; if (c === 'tokyo') drawUkiyoe(r); else if (RINGER_PAL[c]) drawRingers(r, RINGER_PAL[c]); else drawFlow(r); if (c === 'sh') buildSquiggleRig(mulberry32(fnv1a(traits.token + '#squiggle'))); }
   const flowScr = cnv(640, 800), flowMat = scrMat(flowScr.t);
   const FLOW_PAL = [['#D9442F', 18], ['#F2B33D', 16], ['#1F4E8C', 16], ['#2A2A2A', 12], ['#EFE9DD', 14], ['#5B8E7D', 9], ['#E58A9A', 9], ['#6FA8DC', 6]];
   function drawFlow(r) {
@@ -1031,7 +1179,7 @@ const field = (() => {
   function setName(k, text, col, label, at, quick) { const st = nameSt[k]; if (st.text === text && st.label === label) return; Object.assign(st, { text, col, label, ign: at, quick, fired: false }); drawName(k, text, col, label); }
   const annQ = []; let annUntil = -1, clock3d = 0;
   function announce(name, delay = 2.5) { if (name) annQ.push({ name, at: clock3d + delay }); }
-  let camFocus = -1, camAz = 0; const focusT = new THREE.Vector3(), baseT = new THREE.Vector3(0, 9, 0);   /* 点名运镜：转向名字塔直到点名结束（用户拖动时不抢镜头） */
+  let camFocus = -1, camAz = 0; const focusT = new THREE.Vector3(), baseT = new THREE.Vector3(0, 13, 0);   /* 注视点抬高：多露楼顶与天空 */   /* 点名运镜：转向名字塔直到点名结束（用户拖动时不抢镜头） */
   // 甩镜：固定 WHIP_DUR 秒完成（缓入缓出，与转角大小无关）；两次甩镜至少间隔 camOpt.cooldown 秒；用户松手后 camOpt.idle 秒内不抢镜；camOpt.auto=false 关闭自动运镜（点名照常）
   const camOpt = { auto: true, cooldown: 30, idle: 4 }, WHIP_DUR = 1.0, ORBIT_W = .05;   /* ORBIT_W：平时环绕角速度（rad/s） */ let whip = null, lastWhip = -1e9, lastDrag = -1e9;
   const easeIO = x => x < .5 ? 4*x*x*x : 1 - Math.pow(-2*x + 2, 3)/2;
@@ -1041,10 +1189,10 @@ const field = (() => {
       const om = api.autoOrbit ? ORBIT_W : 0, d0 = ((camAz - az) % (Math.PI*2) + Math.PI*2) % (Math.PI*2), dur = WHIP_DUR*(d0 <= Math.PI ? 1 : 1 + (d0 - Math.PI)/Math.PI*.6);   /* 原则：只沿环绕方向（az 增大）前进，绝不回头 */
       const d = ((d0 - om*dur) % (Math.PI*2) + Math.PI*2) % (Math.PI*2); whip = { t0: t, az0: az, d, om, dur, tg0: target.clone(), dist0: dist, dist1: Math.min(camTargetDist, 21) }; }   /* 注视点移向名字塔，保证它在画面中央 */
     if (annQ.length && t >= annQ[0].at && t >= annUntil - 1) { const a = annQ.shift(), c0 = pickSign(Math.random); annUntil = t + 9;   /* 点名：大牌先亮，中继牌每 0.35s 接力 */
-      setName(0, a.name, c0, '新上麥 NEW', t, false); for (let k = 1; k < 4; k++) setName(k, a.name, pickSign(Math.random), '上麥', t + .35*k, false); }
+      setName(0, a.name, c0, traits.C.L.newOn, t, false); for (let k = 1; k < 4; k++) setName(k, a.name, pickSign(Math.random), traits.C.L.relay, t + .35*k, false); }
     if (t > annUntil) { const live = speakers.filter(s => !s.you || micLevel != null), main = speakers[mainIdx] || speakers[0];   /* 常态：大牌显示正在说话的人，中继牌显示其他在麦的人 */
-      if (main) setName(0, main.name, '#2BF0FF', '發言中', t, true);
-      const others = live.filter(s => s !== main).map(s => s.name); for (let k = 1; k < 4; k++) setName(k, others[(k - 1) % Math.max(1, others.length)] || 'ANT.FUN', NEON[k % NEON.length], '在麥', t, true); }
+      if (main) setName(0, main.name, '#2BF0FF', traits.C.L.speaking, t, true);
+      const others = live.filter(s => s !== main).map(s => s.name); for (let k = 1; k < 4; k++) setName(k, others[(k - 1) % Math.max(1, others.length)] || 'ANT.FUN', NEON[k % NEON.length], traits.C.L.onMic, t, true); }
     nameSt.forEach((st, k) => { if (!st.mesh) return; const e = t - st.ign, seq = st.quick ? IGN_Q : IGN;
       if (!st.quick && !st.fired && e >= .68) { st.fired = true; flash.set(st.col).multiplyScalar(k ? .25 : .7); }   /* 灯管稳定点亮的瞬间：全城闪光 */ let o = e < 0 ? .04 : 1; if (e >= 0) for (const [a, b, v] of seq) if (e >= a && e < b) { o = v; break; }
       st.mesh.material.opacity = o; st.mesh.material.color.setScalar(e >= 0 && e < 1.6 && !st.quick ? 1 + (1.6 - e)*.5 : 1); });   /* 刚亮起时过曝一下再回落 */
@@ -1053,7 +1201,7 @@ const field = (() => {
   const roomCv = cnv(1024, 360), roomMat = addMat(roomCv.t);
   function drawRoomSign() { const { g, t } = roomCv, nm = info.name || 'ANT.FUN LIVE', col = traits ? traits.neon[0] : '#FF2BD6'; g.clearRect(0, 0, 1024, 360);
     g.save(); g.shadowColor = '#FFD23F'; g.shadowBlur = 20; g.strokeStyle = '#FFD23F'; g.lineWidth = 6; g.strokeRect(20, 20, 984, 320); g.restore();
-    neon(g, 'LIVE ROOM · 直播間', 512, 70, 34, '#FFD23F', { tube: false, weight: 600 }); neon(g, nm, 512, 210, fitSize(g, nm, 900, 150), col); t.needsUpdate = true; }
+    neon(g, traits ? traits.C.L.room : 'LIVE ROOM', 512, 70, 34, '#FFD23F', { tube: false, weight: 600 }); neon(g, nm, 512, 210, fitSize(g, nm, 900, 150), col); t.needsUpdate = true; }
   // 13) 全城灯火：地标楼正面整面「楼层进度条」——亮到当前进度、最高一层是呼吸的火线、电梯光往上冲；未亮的楼层保留淡淡轮廓（不全黑）
   const progMat = new THREE.ShaderMaterial({ transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false,
     uniforms: { uP: { value: .2 }, uTime: { value: 0 }, uFloors: { value: 20 }, uA: { value: new THREE.Color('#FF2BD6') }, uB: { value: new THREE.Color('#FFB86B') } },
@@ -1068,6 +1216,76 @@ const field = (() => {
         c+=uA*.3*exp(-pow((abs(vUv.x-.5)-.485)*110.0,2.0));                                           /* 两侧导轨 */
         gl_FragColor=vec4(c,1.0); }` });
   let prog = .2, progShown = .2, progExternal = false;
+  // ---- 城市专属招牌形制 ----
+  // 小灯箱图集（东京袖招牌 / 首尔楼面灯箱共用）：2048×1024 切 8×8=64 格，每格 256×128，横排文字
+  const boxAtlas = cnv(2048, 1024), boxMat = new THREE.MeshBasicMaterial({ map: boxAtlas.t, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, fog: false, side: THREE.DoubleSide });
+  function drawBoxes(r) { const { g, t } = boxAtlas, C = traits.C, list = (C.box || ['BAR']).slice(); g.clearRect(0, 0, 2048, 1024);
+    for (let i = list.length - 1; i > 0; i--) { const j = (r()*(i + 1))|0; [list[i], list[j]] = [list[j], list[i]]; }
+    for (let i = 0; i < 64; i++) { const x0 = (i % 8)*256, y0 = Math.floor(i/8)*128, txt = list[i % list.length], col = pickSign(r), lit = r() < .62;
+      g.save(); g.beginPath(); g.rect(x0, y0, 256, 128); g.clip();
+      if (lit) { g.shadowColor = col; g.shadowBlur = 16; g.fillStyle = col; g.globalAlpha = .9; g.fillRect(x0 + 8, y0 + 10, 240, 108); g.globalAlpha = 1; g.shadowBlur = 0;   // 灯箱：亮底深字
+        g.font = `700 ${fitSize(g, txt, 210, 64)}px ${FONT}`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = '#05070b'; g.fillText(txt, x0 + 128, y0 + 66); }
+      else { g.fillStyle = 'rgba(5,7,11,.9)'; g.fillRect(x0 + 8, y0 + 10, 240, 108); g.shadowColor = col; g.shadowBlur = 12; g.strokeStyle = col; g.lineWidth = 4; g.strokeRect(x0 + 12, y0 + 14, 232, 100); g.shadowBlur = 0;   // 暗底霓虹字
+        neon(g, txt, x0 + 128, y0 + 66, fitSize(g, txt, 200, 60), col, { tube: false }); }
+      g.restore(); }
+    t.needsUpdate = true; }
+  const boxPlane = (i, w, h) => { const geo = new THREE.PlaneGeometry(w, h), uv = geo.attributes.uv, col = i % 8, row = Math.floor(i/8) % 8;
+    for (let k = 0; k < uv.count; k++) uv.setXY(k, (col + uv.getX(k))/8, 1 - (row + 1 - uv.getY(k))/8); return geo; };
+  // 首尔屋顶红色霓虹十字架
+  const crossCv = cnv(128, 256), crossMat = addMat(crossCv.t); crossMat.side = THREE.DoubleSide;
+  { const { g, t } = crossCv; g.shadowColor = '#FF2A3A'; g.shadowBlur = 18; g.strokeStyle = '#FF2A3A'; g.lineWidth = 12; g.lineCap = 'round'; g.beginPath(); g.moveTo(64, 24); g.lineTo(64, 236); g.moveTo(26, 82); g.lineTo(102, 82); g.stroke();
+    g.shadowBlur = 0; g.strokeStyle = 'rgba(255,220,220,.9)'; g.lineWidth = 3.5; g.stroke(); t.needsUpdate = true; }
+  // 屋顶大字 / 屋顶广告塔（上海：红色灯管大字；东京：白底红字灯箱 + 钢架）
+  const roofCv = Array.from({ length: 5 }, () => cnv(1024, 300)), roofMats = roofCv.map(c => { const m = addMat(c.t); m.side = THREE.DoubleSide; return m; });
+  function drawRoofs() { const C = traits.C; roofCv.forEach((cv, k) => { const { g, t } = cv, txt = (C.roof || ['ANT.FUN'])[k % (C.roof || [1]).length]; g.clearRect(0, 0, 1024, 300);
+    if (traits.city === 'tokyo') { g.strokeStyle = 'rgba(150,165,185,.55)'; g.lineWidth = 6; for (let x = 120; x <= 904; x += 196) { g.beginPath(); g.moveTo(x, 210); g.lineTo(x, 300); g.stroke(); } g.beginPath(); g.moveTo(80, 262); g.lineTo(944, 262); g.stroke();   // 钢架
+      g.shadowColor = '#EEF4FF'; g.shadowBlur = 22; g.fillStyle = '#EEF4FF'; g.fillRect(40, 20, 944, 190); g.shadowBlur = 0; g.font = `700 ${fitSize(g, txt, 860, 140)}px ${FONT}`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = '#E3141F'; g.fillText(txt, 512, 118); }
+    else { g.strokeStyle = 'rgba(255,200,87,.35)'; g.lineWidth = 4; g.beginPath(); g.moveTo(60, 250); g.lineTo(964, 250); g.stroke(); for (let x = 100; x <= 924; x += 206) { g.beginPath(); g.moveTo(x, 250); g.lineTo(x, 300); g.stroke(); }   // 细钢架
+      neon(g, txt, 512, 128, fitSize(g, txt, 900, 190), k % 2 ? '#FFC857' : '#FF2A3A'); }
+    t.needsUpdate = true; }); }
+  // 纽约巨幅 LED 广告屏（时代广场式）：亮底大字 + 滚动条纹，持续刷新
+  const boardCv = Array.from({ length: 6 }, () => cnv(512, 288)), boardMats = boardCv.map(c => scrMat(c.t));
+  function drawBoard(k, t) { const B = traits.C.board[k % traits.C.board.length], { g, t: tex } = boardCv[k], [a, b, bg, fg] = B, s2 = (t*.35 + k*.17) % 1;
+    const gr = g.createLinearGradient(0, 0, 512, 288); gr.addColorStop(0, bg); gr.addColorStop(1, '#05070b'); g.fillStyle = gr; g.fillRect(0, 0, 512, 288);
+    g.fillStyle = 'rgba(255,255,255,.08)'; for (let x = -288 + s2*96; x < 512; x += 48) { g.beginPath(); g.moveTo(x, 288); g.lineTo(x + 24, 288); g.lineTo(x + 312, 0); g.lineTo(x + 288, 0); g.fill(); }
+    const txt = a.replace('$TOKEN', '$' + mainTok()); g.font = `800 ${fitSize(g, txt, 470, 96)}px ${FONT}`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = fg; g.shadowColor = fg; g.shadowBlur = 14; g.fillText(txt, 256, 120); g.shadowBlur = 0;
+    const sub = b.replace('$TOKEN', '$' + mainTok()); g.font = `600 ${fitSize(g, sub, 440, 38)}px ${FONT}`; g.fillStyle = '#EEF4FF'; g.fillText(sub, 256, 212);
+    scan(g, 512, 288); tex.needsUpdate = true; }
+  const slabCv = cnv(2048, 512), slabMat = new THREE.MeshBasicMaterial({ map: slabCv.t, transparent: true, depthWrite: false, color: new THREE.Color(.62, .66, .72) });
+  function drawSlabNums() { const { g, t } = slabCv; g.clearRect(0, 0, 2048, 512); g.font = `700 92px "Noto Sans KR","Chakra Petch",sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = '#fff';
+    for (let k = 0; k < 16; k++) g.fillText(`${101 + k + (k > 7 ? 2 : 0)}동`, (k % 4)*512 + 256, Math.floor(k/4)*128 + 66); t.needsUpdate = true; }
+  const slabPlane = (k, w, h) => { const geo = new THREE.PlaneGeometry(w, h), uv = geo.attributes.uv, col = k % 4, row = Math.floor(k/4);
+    for (let i = 0; i < uv.count; i++) uv.setXY(i, (col + uv.getX(i))/4, 1 - (row + 1 - uv.getY(i))/4); return geo; };
+  const ensureGrp = b => { if (!b.grp) { b.grp = new THREE.Group(); b.grp.position.set(b.x, 0, b.z); b.grp.rotation.y = b.rotY; city.add(b.grp); } return b.grp; };
+  let boardsOn = 0;
+  function layoutForms(host, avoid) {
+    const C = traits.C, fr = mulberry32(fnv1a(traits.token + '#forms')), taken = new Set(host);
+    const freeTop = b => Math.min(b.h - 2, b.occLow == null ? 1e9 : b.occLow - .8);                       // 可用楼层上限：正面大屏下沿以下
+    const F = blds.filter(b => b.inner && b.h > 14 && !avoid.has(b)).sort(() => fr() - .5);              // 只挂内圈（镜头看得到）
+    let slot = 0; boardsOn = 0;
+    if (C.forms.includes('stack') || C.forms.includes('bands')) drawBoxes(mulberry32(fnv1a(traits.token + '#boxes')));
+    if (C.forms.includes('stack')) F.forEach(b => {                                   // 东京：杂居楼袖招牌，每层一块竖向叠放、垂直挑出
+      const sides = fr() < .6 ? [1, -1] : [fr() < .5 ? 1 : -1], W = 4.4, H = 2.5; ensureGrp(b);   // 两侧各一列，每层一块
+      sides.forEach(side => { const n = 5 + ((fr()*5)|0), y0 = 2.6 + fr()*1.5;
+        for (let f = 0; f < n && y0 + (f + 1)*(H + .3) < freeTop(b); f++) { const m = new THREE.Mesh(boxPlane(slot++ % 64, W, H), boxMat), rot = Math.PI/2 - .55; m.rotation.y = side*rot; m.position.set(side*(b.w/2 - .25 + Math.cos(rot)*W/2*0 + Math.sin(.55)*W/2), y0 + H/2 + f*(H + .3), b.d/2 + Math.cos(.55)*W/2 + .12);   /* 朝广场斜转约 30°，正面看得到字 */ b.grp.add(m); signs.push(m); } }); });
+    if (C.forms.includes('bands')) F.forEach(b => {                                   // 首尔：低层楼面逐层贴满横向灯箱
+      const nf = 3 + ((fr()*4)|0), W = b.w*.44, H = 1.75; ensureGrp(b);
+      for (let f = 0; f < nf && 3 + (f + 1)*2.2 < freeTop(b); f++) [-1, 1].forEach(sx => { const m = new THREE.Mesh(boxPlane(slot++ % 64, W, H), boxMat); m.position.set(sx*b.w*.235, 3 + H/2 + f*2.2, b.d/2 + .22); b.grp.add(m); signs.push(m); }); });
+    if (traits.city === 'seoul') { drawSlabNums(); blds.filter(b => b.slab).forEach((b, k) => { if (k >= 16) return; ensureGrp(b);   // 板楼侧面漆着巨大的楼栋号
+      const W = b.w*.42, H = W*.25, m = new THREE.Mesh(slabPlane(k, W, H), slabMat); m.position.set(0, b.h - H*.75, b.d/2 + .15); b.grp.add(m); }); }
+    if (C.forms.includes('cross')) blds.filter(b => b.h < 40 && b.rad < 100 && b !== host[0] && b !== host[13]).sort(() => fr() - .5).slice(0, 14).forEach(b => {   // 首尔：屋顶红色十字架（矮楼，镜头看得到楼顶）
+      const m = new THREE.Mesh(new THREE.PlaneGeometry(3.6, 7.2), crossMat); m.position.set(0, b.h + 3.9, 0); ensureGrp(b).add(m); signs.push(m); });
+    if (C.forms.includes('board')) F.map(b => ({ b, W: Math.min(b.w*1.05, (freeTop(b) - 3.5)/.5625) })).filter(o => o.W >= 7).slice(0, 6).forEach(({ b, W }, k) => {   // 纽约：巨幅 LED 广告屏（大屏下方的楼层）
+      const H = W*.5625; ensureGrp(b); const m = mountPlane(b, boardMats[k], W, H, 0, 3.5 + H/2, b.d/2 + .3); screens.push(m); boardsOn = k + 1; });
+    if (C.forms.includes('roof')) { drawRoofs(); blds.filter(b => b.h > 12 && b.h < 34 && b.rad < 100 && b !== host[0] && b !== host[13]).sort((p, q) => p.rad - q.rad).slice(0, 5).forEach((b, k) => {   // 上海屋顶大字 / 东京屋顶广告塔（矮楼，镜头看得到楼顶）
+      const W = Math.max(b.w*1.4, 14), H = W*.293, m = new THREE.Mesh(new THREE.PlaneGeometry(W, H), roofMats[k]); m.position.set(0, b.h + H/2 + .3, 0); ensureGrp(b).add(m); signs.push(m); }); }
+  }
+  // 字体就位后重画所有城市文字（日文 / 韩文 / 繁体字体按需加载）
+  function redrawCityText() { if (!traits) return; drawVSigns(mulberry32(fnv1a(traits.token + '#signs'))); const C = traits.C;
+    if (C.forms.includes('stack') || C.forms.includes('bands')) drawBoxes(mulberry32(fnv1a(traits.token + '#boxes'))); if (C.forms.includes('roof')) drawRoofs();
+    drawRoomSign(); drawAds(); drawCoinSign(); drawTicker(); nameSt.forEach(st => { st.text = ''; }); }
+  function ensureCityFont(tr) { if (!document.fonts || !document.fonts.load) return; const sample = tr.C.vs.filter(x => x[0] !== '@').join('') + (tr.C.box || []).join('') + (tr.C.roof || []).join('');
+    document.fonts.load(`700 64px ${tr.C.font}`, sample).then(() => { if (traits === tr) redrawCityText(); }).catch(() => {}); }
   // 招牌材质只建一次；挂点几何每次进房随城市重建
   const coinMat = addMat(coinSign.t), kMat = scrMat(kScr.t), spkMat = scrMat(spkScr.t), vMat = addMat(vSign.t), adMats = ads.map(a => addMat(a.t));
   const tickMat = new THREE.MeshBasicMaterial({ map: tick.t, fog: false, side: THREE.DoubleSide }), beaconMat = new THREE.SpriteMaterial({ map: texGlow, color: COL.sell, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, fog: false });
@@ -1085,7 +1303,8 @@ const field = (() => {
       band.position.y = Math.max(8, Math.min(b.h - 4, b.h*.4)); b.grp.add(band); screens.push(band); }
     host.slice(5, 7).forEach((b, k) => { const pw = Math.max(b.w*1.15, 12), ph = pw*1.5, gm = mountPlane(b, girlMats[k], pw, ph, 0, fit(b, ph, .5)); gm.userData.base = posterStyle === 'silhouette' ? 1 : .8; gm.userData.poster = true; screens.push(gm); });   // 8) 少女剪影大屏
     if (host[7]) { const b = host[7], pw = Math.max(b.w*1.7, 18), pr = mulberry32(fnv1a(traits.token + '#punk')); punks.length = 0; for (let i = 0; i < 4; i++) punks.push(makePunk(pr)); drawPunks(); screens.push(mountPlane(b, punkMat, pw, pw, 0, fit(b, pw, .5))); }   // 9) PUNK 屏
-    if (host[8]) { const b = host[8], pw = Math.max(b.w*1.9, 22), ph = pw*1.25; drawFlow(mulberry32(fnv1a(traits.token + '#flow'))); const fm = mountPlane(b, flowMat, pw, ph, 0, Math.max(ph/2 + 2, Math.min(b.h - ph/2, b.h*.5))); fm.userData.base = .58; screens.push(fm); }   // 10) 流场巨幕
+    if (host[8]) { const b = host[8], isSq = false, pw = isSq ? Math.max(b.w*2.4, 28) : Math.max(b.w*1.9, 22), ph = isSq ? pw/1.5 : pw*1.25; drawArtWall(mulberry32(fnv1a(traits.token + '#flow')));   // 上海：横幅巨型 Squiggle
+      const fm = mountPlane(b, isSq ? sqMat : flowMat, pw, ph, 0, Math.max(ph/2 + 2, Math.min(b.h - ph/2, b.h*.5))); fm.userData.base = isSq ? .9 : .58; screens.push(fm); }   // 10) 流场巨幕
     [9, 10].forEach((hi, j) => { const b = host[hi]; if (!b) return; const pw = Math.max(b.w*1.15, 12), ph = pw*1.5, gm = mountPlane(b, girlMats[2 + j], pw, ph, 0, fit(b, ph, .5)); gm.userData.base = posterStyle === 'silhouette' ? 1 : .8; gm.userData.poster = true; screens.push(gm); });   // 8b) 篮球 / 自行车海报
     [11, 12].forEach((hi, j) => { const b = host[hi]; if (!b) return; const pw = Math.max(b.w*1.15, 12), ph = pw*1.5, gm = mountPlane(b, girlMats[4 + j], pw, ph, 0, fit(b, ph, .5)); gm.userData.base = posterStyle === 'silhouette' ? 1 : .8; gm.userData.poster = true; screens.push(gm); });   // 8c) 冲浪 / 击剑海报
     host.slice(13).forEach((b, i) => signs.push(mountPlane(b, adMats[i], b.w*.85, b.w*.425, 0, fit(b, b.w*.425, .3 + (i % 3)*.2))));   // 6) 小广告
@@ -1100,14 +1319,15 @@ const field = (() => {
     // 7) 竖向挂牌：平贴楼面两侧或垂直挑出（双面），用独立种子保证同一个币布局不变
     const sr = mulberry32(fnv1a(traits.token + '#signs')); drawVSigns(sr); let slot = 0;
     const cand = blds.filter(b => b.rad < 100 && b.h > 14 && b !== host[3]).sort(() => sr() - .5);   /* 名字塔那栋楼正面留给进度条 */
-    const SLOTS = Math.min(48, VS_TXT.length); for (const b of cand) { if (slot >= SLOTS) break;
+    const SLOTS = Math.min(48, VS_TXT().length); for (const b of cand) { if (slot >= SLOTS) break;
       if (!b.grp) { b.grp = new THREE.Group(); b.grp.position.set(b.x, 0, b.z); b.grp.rotation.y = b.rotY; city.add(b.grp); }
       for (let k = 0, n = sr() < .6 ? 1 : 2; k < n && slot < SLOTS; k++) {
         const sw = 2.4 + sr()*1.4, sh = sw*4, side = k ? -1 : (sr() < .5 ? 1 : -1), room = Math.min(b.h, 36) - sh - 4; if (room < 0) continue;
         const m = new THREE.Mesh(slotPlane(slot++, sw, sh), vsMat), y = 3 + sh/2 + sr()*room;
-        if (sr() < .45) { m.rotation.y = Math.PI/2; m.position.set(side*(b.w/2 - .4), y, b.d/2 + sw/2 + .15); }   // 垂直挑出
+        if (sr() < traits.C.hang) { m.rotation.y = Math.PI/2; m.position.set(side*(b.w/2 - .4), y, b.d/2 + sw/2 + .15); }   // 垂直挑出
         else m.position.set(side*(b.w/2 - sw/2 - .25), y, b.d/2 + .25);                                         // 平贴楼面
         b.grp.add(m); signs.push(m); } }
+    layoutForms(host, new Set([host[3], ...near]));   // 城市专属招牌形制（避开名字塔与中继牌）
     tops.slice(0, 12).forEach(v => { const s = new THREE.Sprite(beaconMat.clone()); s.position.copy(v); s.scale.setScalar(1.8); s.userData.ph = Math.random()*6.28; city.add(s); beacons.push(s); });   // 航空障碍灯
   }
   redrawStatic(); if (document.fonts && document.fonts.ready) document.fonts.ready.then(redrawStatic);   // 字体到位后重画一次
@@ -1119,8 +1339,8 @@ const field = (() => {
     crowdN = n; const N = Math.min(Math.max(n, 8), MAX_OSC); cPhase = new Float32Array(N); cFreq = new Float32Array(N);
     for (let i = 0; i < N; i++) { cPhase[i] = Math.random()*6.2831; cFreq[i] = 2.2 + (Math.random() - .5)*.5; }
     coupling = 0; syncR = 0; cityMat.uniforms.uLit.value = .04 + .12*Math.min(1, Math.log10(n + 1)/4.2);   // 人气越高亮窗越多
-    traits = rollTraits(mainTok()); buildCity(traits); layoutCity(); drawAds();
-    tickItems.length = 0; tickItems.push(titleItem(), { s: `${fmtN(n)} LISTENING`, c: '#2BF0FF' });
+    traits = rollTraits(mainTok(), info.city); buildCity(traits); layoutCity(); drawAds(); drawRoomSign(); ensureCityFont(traits);
+    tickItems.length = 0; tickItems.push(titleItem(), { s: `${fmtN(n)} ${traits.C.L.listen}`, c: '#2BF0FF' });
     drawTicker(); drawCoinSign(); drawKScreen(); drawSpkScreen();
   }
   // 平均场 Kuramoto，O(N)：低耦合=各自失相，高耦合=齐脉动；序参量 r 即"共识强度"
@@ -1207,6 +1427,7 @@ const field = (() => {
     want.forEach(n => { if (!speakers.some(s => s.name === n)) { const sp = addSpeaker(n); if (sp) { sp.talking = true; sp.next = 3; mainIdx = speakers.indexOf(sp); mainTimer = 6; announce(n); } } });
   }
   function setRoomInfo(o = {}) {
+    if (o.city !== undefined) { const c = CITIES[o.city] ? o.city : null; if (c !== info.city) { info.city = c; if (stageEl) setupRoom(crowdN); } }
     if (o.name != null) { info.name = String(o.name); drawRoomSign(); }
     if (o.title != null) { info.title = String(o.title); const i = tickItems.findIndex(x => x.title); if (i >= 0) tickItems[i] = titleItem(); else tickItems.unshift(titleItem()); tickDirty = true; }
     if (o.tokens) { const tk = o.tokens.map(x => String(typeof x === 'string' ? x : x.symbol || '').toUpperCase()).filter(Boolean);
@@ -1275,7 +1496,7 @@ const field = (() => {
   }
   function readMic() { if (!analyser) return; analyser.getFloatTimeDomainData(micBuf); let sum = 0; for (let i = 0; i < micBuf.length; i++) sum += micBuf[i]*micBuf[i]; const lv = Math.min(1, Math.sqrt(sum/micBuf.length)*6); micLevel = micLevel == null ? lv : micLevel + (lv - micLevel)*(lv > micLevel ? .6 : .15); }
   // camera：低机位仰视，站在广场上看四周的楼
-  let az = .6, pol = 1.38, dist = 30, camTargetDist = 30, dragging = false, lx = 0, ly = 0; const target = new THREE.Vector3(0, 9, 0); const dom = renderer.domElement;
+  let az = .6, pol = 1.38, dist = 30, camTargetDist = 30, dragging = false, lx = 0, ly = 0; const target = new THREE.Vector3(0, 13, 0); const dom = renderer.domElement;
   dom.addEventListener('pointerdown', e => { dragging = true; lx = e.clientX; ly = e.clientY; dom.setPointerCapture(e.pointerId); });
   dom.addEventListener('pointermove', e => { if (!dragging) return; az -= (e.clientX-lx)*.005; pol = Math.max(.75, Math.min(1.5, pol - (e.clientY-ly)*.004)); lx = e.clientX; ly = e.clientY; });
   dom.addEventListener('pointerup', () => { dragging = false; lastDrag = clock3d; });
@@ -1285,7 +1506,7 @@ const field = (() => {
   function resize() { if (!stageEl) return; const w = stageEl.clientWidth, h = stageEl.clientHeight; if (!w || !h) return; renderer.setSize(w, h, false); camera.aspect = w/h; camera.updateProjectionMatrix(); resizeRT(); }
   function mount(stage, labels, chips, room) {
     unmount(); stageEl = stage; labelsEl = labels; chipsEl = chips; roomRef = room; stage.insertBefore(dom, stage.firstChild);
-    info.name = room.name || `${room.host} 的直播間`; info.title = room.title || ''; info.tokens = (room.tokens || [room.coin]).map(x => String(x).toUpperCase()); tokIdx = 0; annQ.length = 0; annUntil = -1; camFocus = -1; whip = null; lastWhip = -1e9; prog = progShown = .2 + .1*Math.min(1, Math.log10(room.n + 1)/4);
+    info.city = room.city || null; info.name = room.name || `${room.host} 的直播間`; info.title = room.title || ''; info.tokens = (room.tokens || [room.coin]).map(x => String(x).toUpperCase()); tokIdx = 0; annQ.length = 0; annUntil = -1; camFocus = -1; whip = null; lastWhip = -1e9; prog = progShown = .2 + .1*Math.min(1, Math.log10(room.n + 1)/4);
     room.speakers.forEach(n => addSpeaker(n)); setupRoom(room.n); announce(room.speakers[0], 3);
     ro = new ResizeObserver(resize); ro.observe(stage); resize(); updHandCount(); az = .6; pol = 1.38; dist = camTargetDist = 30;
   }
@@ -1300,13 +1521,14 @@ const field = (() => {
   }
   let signT = 0, spkT = 0, punkT = 4;
   const api = { autoOrbit: true, mount, unmount, tradeEvent, raiseHand, promoteHand, useMic, get talking() { return speakers.filter(s => s.talking).length; }, get hands() { return hands.length; }, get sync() { return { r: syncR, coupling, n: crowdN }; }, setRoomInfo, setProgress(p) { progExternal = true; prog = Math.max(.12, Math.min(1, +p || 0)); }, get progress() { return +progShown.toFixed(3); }, get speakerNames() { return speakers.filter(s => !s.you).map(s => s.name); }, get nameSigns() { return nameSt.map(s => s.text); },
+    get cities() { return CITY_KEYS.slice(); },
     setPosterStyle(st) { posterStyle = st === 'sport' ? 'sport' : 'silhouette'; screens.forEach(m => { if (m.userData.poster) m.userData.base = posterStyle === 'silhouette' ? 1 : .8; }); return posterStyle; },   // 对比测试：'silhouette' | 'sport'
     get posterStyle() { return posterStyle; },
     setAutoCamera(o) { if (typeof o === 'boolean') camOpt.auto = o; else Object.assign(camOpt, o); },   // 研发：关闭/调节点名甩镜 { auto, cooldown, idle }
     get camState() { return { whip: !!whip, focus: camFocus > clock3d, az: +az.toFixed(3), sinceWhip: +(clock3d - lastWhip).toFixed(1) }; },
     focusNameSign() { const m = nameSt[0].mesh; if (!m) return; const v = new THREE.Vector3(); m.getWorldPosition(v); az = Math.atan2(-v.x, -v.z); api.autoOrbit = false; },   // 调试：镜头转向名字塔
-    setView(a) { az = a; api.autoOrbit = false; },   // 调试：固定视角
-    get traits() { return traits && { token: traits.token, scheme: traits.scheme, skyline: traits.skyline, edgeRate: +traits.edgeRate.toFixed(2) }; },
+    setView(a) { az = a; api.autoOrbit = false; }, setPitch(v) { pol = Math.max(.75, Math.min(1.5, v)); },   // 调试：固定视角
+    get traits() { return traits && { token: traits.token, city: traits.city, cityName: traits.C.name, scheme: traits.scheme, skyline: traits.skyline, edgeRate: +traits.edgeRate.toFixed(2) }; },
     frame(dt, t) {
       if (!stageEl) return;
       if (dragging && whip) { whip = null; camFocus = -1; }                                                   /* 用户一拖动立即交还镜头 */
@@ -1327,8 +1549,8 @@ const field = (() => {
       // 城市：屏幕刷新 / 跑马灯滚动 / 闪光衰减 / 障碍灯
       signT -= dt; if (signT <= 0) { drawCoinSign(); drawKScreen(); signT = .5; }
       tokT += dt; if (tokT > 6) { tokT = 0; tokIdx++; drawCoinSign(); }   /* 购物车 token 每 6 秒轮换 */
-      stepNames(dt); progShown += (prog - progShown)*Math.min(1, dt*1.5); progMat.uniforms.uP.value = progShown; progMat.uniforms.uTime.value = t;
-      spkT -= dt; if (spkT <= 0) { drawSpkScreen(); for (let k = 0; k < 6; k++) drawGirl(k, t); spkT = .15; }
+      stepSquiggleRig(t); stepNames(dt); progShown += (prog - progShown)*Math.min(1, dt*1.5); progMat.uniforms.uP.value = progShown; progMat.uniforms.uTime.value = t;
+      spkT -= dt; if (spkT <= 0) { for (let k = 0; k < boardsOn; k++) drawBoard(k, t); drawSpkScreen(); for (let k = 0; k < 6; k++) drawGirl(k, t); spkT = .15; }
       punkT -= dt; if (punkT <= 0 && punks.length) { punks[(Math.random()*4)|0] = makePunk(Math.random); drawPunks(); punkT = 4; }   /* 每 4 秒换一张头像 */
       if (tickDirty) { drawTicker(); tickDirty = false; } tick.t.offset.x = (tick.t.offset.x + dt*.025) % 1;
       flash.multiplyScalar(Math.pow(.5, dt/.22)); cityMat.uniforms.uFlash.value.copy(flash);
@@ -1367,7 +1589,7 @@ function loop(now) {
 }
 
 // keys
-window.addEventListener('keydown', e => { if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return; const k = e.key.toLowerCase(); if (!state.room) return; if (k === 'b') { field.tradeEvent('buy'); chat('buy', 'You', `买入 ${state.room.coin} <span class="amt">${fmt$(rnd(20, 300))}</span>`); } if (k === 's') { field.tradeEvent('sell'); chat('sell', 'You', `卖出 ${state.room.coin} <span class="amt">${fmt$(rnd(20, 300))}</span>`); } if (k === 'p') { toast('大屏：' + (field.setPosterStyle(field.posterStyle === 'silhouette' ? 'sport' : 'silhouette') === 'silhouette' ? '少女剪影' : '运动海报')); } if (k === 'g') { field.tradeEvent('buy', true); chat('buy', 'You', `买入 ${state.room.coin} <span class="amt">${fmt$(rnd(2000, 9000))}</span>`); } });
+window.addEventListener('keydown', e => { if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return; const k = e.key.toLowerCase(); if (!state.room) return; if (k === 'b') { field.tradeEvent('buy'); chat('buy', 'You', `买入 ${state.room.coin} <span class="amt">${fmt$(rnd(20, 300))}</span>`); } if (k === 's') { field.tradeEvent('sell'); chat('sell', 'You', `卖出 ${state.room.coin} <span class="amt">${fmt$(rnd(20, 300))}</span>`); } if (k === 'c') { const cs = field.cities, cur = field.traits ? field.traits.city : 'hk', nx = cs[(cs.indexOf(cur) + 1) % cs.length]; field.setRoomInfo({ city: nx }); toast('城市：' + field.traits.cityName); } if (k === 'p') { toast('大屏：' + (field.setPosterStyle(field.posterStyle === 'silhouette' ? 'sport' : 'silhouette') === 'silhouette' ? '少女剪影' : '运动海报')); } if (k === 'g') { field.tradeEvent('buy', true); chat('buy', 'You', `买入 ${state.room.coin} <span class="amt">${fmt$(rnd(2000, 9000))}</span>`); } });
 
 // boot
 $('.avatar').style.background = PH('shaun');
