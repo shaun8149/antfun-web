@@ -1,6 +1,6 @@
 # ANT.FUN 直播间 3D 声场：功能说明
 
-版本 0.27.0 · 2026-10-02 · 在线预览：https://claude.ai/artifact/L3XTD8T6XFwqjf4yzDLkTJ
+版本 0.28.0 · 2026-10-02 · 在线预览：https://claude.ai/artifact/L3XTD8T6XFwqjf4yzDLkTJ
 
 这份文档说明直播间中央那座「霓虹城市」能做什么、怎么接入、哪些地方可以调。代码都在 `antfun-v2.html` 的 `3D sound field` 段，是一个闭包，对外只暴露 `field` 对象，页面上也挂在 `window.antfunField`。
 
@@ -98,6 +98,16 @@ field.unmount();
 - **字体**：Noto Sans TC / JP / KR / Thai 按需加载，加载完成后自动重画文字（`ensureCityFont`）。
 - **代码位置**：城市表 `CITIES`，招牌形制 `layoutForms`，楼形附加体在 `buildCity` 末尾，艺术巨幕 `drawArtWall`，Squiggle 装置 `buildSquiggleRig`。
 - **预览**：`screenshots/city-*.png`、`screenshots/art-*.png`。
+
+## 2c. 氛围层（参考赛博朋克概念图）
+
+- **LED 点阵**：所有屏幕材质（`scrMat`）在着色器里切成发光圆点，每 4 个贴图像素一颗点，点间是黑缝；近看是像素，远看是图像。招牌灯管（`addMat`）不受影响。
+- **漂浮光点**：800 颗散景光点在城市上空缓慢上浮、摇摆，颜色是红、橙加城市主配色；约 7% 最亮的光点带十字星芒。大单成交时，会有一阵光点加速上升。
+- **巨屏题材库**：6 块人物屏里，前 2 块固定是少女剪影；后 4 块每 30 秒轮换一种题材，包括红圆盘艺伎、刺青风老虎、动漫大眼、金龙线稿、锦鲤，全部用代码手绘。题材按城市有侧重：香港、上海更常出现龙和锦鲤，东京更常出现艺伎和动漫眼。按 `p` 切到「运动海报」时，6 块都换成海报。
+- **像素鱼全息**：一条由点阵构成的大鱼，在 22 米高度绕广场游动、摆尾；离镜头太近时自动隐去。
+- **加密街招**：每座城的内圈楼低层挂 3 块英文霓虹横招，分别是 WE BUY NFTs FOR CASH、CONNECT WALLET、GM / WAGMI。
+- **代码位置**：`scrMat`、`bokMat`、`drawSubject`、`fishMat` / `stepAtmos`、`drawCrypto`。
+- **预览**：`screenshots/atmos-*.png`。
 
 ## 3. 楼上的招牌和屏幕
 

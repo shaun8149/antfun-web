@@ -766,7 +766,7 @@ const field = (() => {
   let blds = [], tops = [], aveAng = 0, sqAng = null; const beacons = [];
   const HEIGHTS = { '中央商务区': [r => 18 + Math.pow(r, 1.5)*46, r => 34 + Math.pow(r, 1.3)*80], '中层街区': [r => 14 + r*26, r => 22 + r*34], '尖塔群': [r => 16 + Math.pow(r, 3)*72, r => 30 + Math.pow(r, 3)*130] };
   function buildCity(tr) {
-    cityMat.uniforms.uWin.value.setRGB(...tr.C.win); uHaze.value.setRGB(...tr.C.haze); scene.fog.color.setRGB(tr.C.haze[0]*.25, tr.C.haze[1]*.25, tr.C.haze[2]*.25 + .03);   /* 窗光色温随城市：东京/首尔冷白荧光，纽约钨丝暖黄 */
+    cityMat.uniforms.uWin.value.setRGB(...tr.C.win); bokMat.uniforms.uA.value.set(tr.neon[0]); bokMat.uniforms.uB.value.set(tr.neon[tr.neon.length - 1]); uHaze.value.setRGB(...tr.C.haze); scene.fog.color.setRGB(tr.C.haze[0]*.25, tr.C.haze[1]*.25, tr.C.haze[2]*.25 + .03);   /* 窗光色温随城市：东京/首尔冷白荧光，纽约钨丝暖黄 */
     const r = tr.rng, hm = tr.C.hMul || 1, [hIn0, hOut0] = HEIGHTS[tr.skyline], hIn = x => hIn0(x)*hm, hOut = x => hOut0(x)*hm, neon = tr.neon.map(c => new THREE.Color(c)), m = new THREE.Matrix4(), q = new THREE.Quaternion(), up = new THREE.Vector3(0, 1, 0), sc = new THREE.Vector3(), ps = new THREE.Vector3();
     blds = [];
     const ave = r()*Math.PI*2; aveAng = ave; sqAng = tr.city === 'sh' ? ave + 2.0944*((r()*3)|0) : null;   /* 上海：装置所在方向清出一片广场 */
@@ -806,7 +806,11 @@ const field = (() => {
   const fitSize = (g, text, maxW, size) => { g.font = `700 100px ${FONT}`; return Math.min(size, 100*maxW/Math.max(1, g.measureText(text).width)); };
   const scan = (g, w, h) => { g.fillStyle = 'rgba(0,0,0,.22)'; for (let y = 0; y < h; y += 3) g.fillRect(0, y, w, 1); };   // 屏幕扫描线
   const addMat = (t) => new THREE.MeshBasicMaterial({ map: t, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, fog: false });
-  const scrMat = (t) => new THREE.MeshBasicMaterial({ map: t, fog: false });
+  // 屏幕材质 = LED 点阵：每 4 个贴图像素一颗圆点，点间黑缝；近看是像素点，远看是图像（亮度补偿点阵损失）
+  const scrMat = (t) => { const m = new THREE.MeshBasicMaterial({ map: t, fog: false });
+    m.onBeforeCompile = sh => { sh.fragmentShader = sh.fragmentShader.replace('#include <map_fragment>', `#include <map_fragment>
+      { vec2 ts = vec2(textureSize(map, 0))/4.0, gq = fract(vUv*ts) - .5; float dd = length(gq); diffuseColor.rgb *= (smoothstep(.5, .28, dd)*1.75 + .04); }`); };
+    m.customProgramCacheKey = () => 'led'; return m; };
   function mountPlane(b, mat, pw, ph, x, y, z = b.d/2 + .2) { const m = new THREE.Mesh(new THREE.PlaneGeometry(pw, ph), mat); m.position.set(x, y, z); b.grp.add(m); if (z > 0) b.occLow = Math.min(b.occLow == null ? 1e9 : b.occLow, y - ph/2); return m; }   /* occLow：正面被占用的最低高度，城市招牌只用它下方的楼层 */
   const signs = [], screens = [];
   // ---- 研发传入的房间信息（setRoomInfo）：名字 / 标题 / 购物车 token（[0] 为主币，决定城市种子）/ 上麦的人 ----
@@ -1045,7 +1049,60 @@ const field = (() => {
     if (Math.random() < .05) { const y = Math.random()*520, h = 12 + Math.random()*40; g.drawImage(girls[k].c, 0, y, 384, h, (Math.random() - .5)*40, y, 384, h); }   /* 故障错位 */
     scan(g, 384, 576); tex.needsUpdate = true;
   }
+  const SUBJ_W = { hk: ['dragon', 'koi', 'geisha', 'tiger', 'eye'], sh: ['dragon', 'koi', 'geisha', 'tiger', 'eye'], tokyo: ['geisha', 'eye', 'koi', 'tiger', 'dragon'] };
+  const subjFor = () => { const L = SUBJ_W[traits && traits.city] || ['tiger', 'eye', 'geisha', 'koi', 'dragon']; return L[Math.min(L.length - 1, Math.floor(Math.pow(Math.random(), 1.6)*L.length))]; };   // 城市侧重：列表靠前的更常见
+  const subjBase = [], subjName = [], subjT = []; const SUBJ_PERIOD = 30;
+  function drawSubject(name) {
+    const c = document.createElement('canvas'); c.width = 384; c.height = 576; const g = c.getContext('2d'); g.fillStyle = '#04050a'; g.fillRect(0, 0, 384, 576);
+    const glow = (col, b) => { g.shadowColor = col; g.shadowBlur = b; };
+    if (name === 'geisha') {                                                                     // 红圆盘艺伎：侧脸 + 发髻 + 簪 + 折扇
+      g.fillStyle = '#D8262E'; g.beginPath(); g.arc(192, 270, 168, 0, 7); g.fill();
+      g.fillStyle = '#0a0a10'; g.beginPath(); g.ellipse(205, 175, 92, 70, -.2, 0, 7); g.fill(); g.beginPath(); g.ellipse(250, 120, 52, 40, .3, 0, 7); g.fill(); g.beginPath(); g.ellipse(150, 140, 40, 34, -.4, 0, 7); g.fill();
+      g.fillStyle = '#F4EDE4'; g.beginPath(); g.moveTo(150, 190); g.bezierCurveTo(140, 240, 150, 300, 185, 330); g.bezierCurveTo(205, 345, 230, 330, 238, 300); g.lineTo(250, 268); g.lineTo(236, 262); g.bezierCurveTo(244, 240, 240, 205, 225, 190); g.closePath(); g.fill();
+      g.fillStyle = '#0a0a10'; g.fillRect(198, 236, 26, 4); g.fillStyle = '#C21A24'; g.beginPath(); g.ellipse(232, 300, 8, 5, 0, 0, 7); g.fill();
+      g.strokeStyle = '#E9C46A'; g.lineWidth = 4; [[255, 100, 300, 60], [270, 120, 322, 92]].forEach(([a, b, c2, d]) => { g.beginPath(); g.moveTo(a, b); g.lineTo(c2, d); g.stroke(); });
+      g.fillStyle = '#F4EDE4'; g.beginPath(); g.moveTo(130, 360); g.lineTo(260, 345); g.lineTo(300, 470); g.lineTo(90, 470); g.closePath(); g.fill(); g.fillStyle = '#1a1424'; g.beginPath(); g.moveTo(170, 360); g.lineTo(230, 352); g.lineTo(210, 470); g.lineTo(160, 470); g.closePath(); g.fill();
+      g.save(); g.translate(110, 400); g.rotate(-.5); for (let i = 0; i <= 10; i++) { const a = -Math.PI*.9 + i*Math.PI*.08; g.fillStyle = i % 2 ? '#F4EDE4' : '#E36A6A'; g.beginPath(); g.moveTo(0, 0); g.arc(0, 0, 120, a, a + Math.PI*.08); g.closePath(); g.fill(); } g.restore(); }
+    else if (name === 'tiger') {                                                                 // 刺青风老虎正脸
+      const cx = 192, cy = 290; glow('#FF8A1F', 20); g.fillStyle = '#F08A24'; g.beginPath(); g.ellipse(cx, cy, 150, 140, 0, 0, 7); g.fill(); g.shadowBlur = 0;
+      [[-1], [1]].forEach(([s2]) => { g.fillStyle = '#F08A24'; g.beginPath(); g.moveTo(cx + s2*70, cy - 120); g.lineTo(cx + s2*140, cy - 175); g.lineTo(cx + s2*135, cy - 95); g.closePath(); g.fill(); g.fillStyle = '#F7E6C8'; g.beginPath(); g.moveTo(cx + s2*92, cy - 122); g.lineTo(cx + s2*128, cy - 155); g.lineTo(cx + s2*124, cy - 110); g.closePath(); g.fill(); });
+      g.fillStyle = '#F7E6C8'; g.beginPath(); g.ellipse(cx - 55, cy + 55, 70, 55, .3, 0, 7); g.fill(); g.beginPath(); g.ellipse(cx + 55, cy + 55, 70, 55, -.3, 0, 7); g.fill(); g.beginPath(); g.ellipse(cx, cy - 20, 34, 70, 0, 0, 7); g.fill();
+      g.strokeStyle = '#14100c'; g.lineCap = 'round'; [[-1], [1]].forEach(([s2]) => { for (let i = 0; i < 4; i++) { g.lineWidth = 12 - i*2; g.beginPath(); g.moveTo(cx + s2*(150 - i*6), cy - 40 + i*30); g.quadraticCurveTo(cx + s2*(110 - i*8), cy - 30 + i*30, cx + s2*(95 - i*5), cy - 50 + i*34); g.stroke(); }
+        g.lineWidth = 9; g.beginPath(); g.moveTo(cx + s2*20, cy - 130); g.quadraticCurveTo(cx + s2*45, cy - 100, cx + s2*30, cy - 75); g.stroke(); });
+      [[-1], [1]].forEach(([s2]) => { glow('#FFD23F', 14); g.fillStyle = '#FFD23F'; g.beginPath(); g.ellipse(cx + s2*58, cy - 40, 24, 14, s2*.25, 0, 7); g.fill(); g.shadowBlur = 0; g.fillStyle = '#0a0a0a'; g.beginPath(); g.ellipse(cx + s2*58, cy - 40, 6, 13, 0, 0, 7); g.fill(); });
+      g.fillStyle = '#E85A7A'; g.beginPath(); g.moveTo(cx - 24, cy + 20); g.lineTo(cx + 24, cy + 20); g.lineTo(cx, cy + 48); g.closePath(); g.fill(); g.strokeStyle = '#14100c'; g.lineWidth = 5; g.beginPath(); g.moveTo(cx, cy + 48); g.lineTo(cx, cy + 70); g.moveTo(cx - 40, cy + 85); g.quadraticCurveTo(cx, cy + 70, cx + 40, cy + 85); g.stroke(); }
+    else if (name === 'eye') {                                                                   // 动漫大眼睛
+      const cx = 192, cy = 290; g.strokeStyle = '#EAF2FF'; g.lineCap = 'round'; glow('#9fd8ff', 12);
+      g.lineWidth = 12; g.beginPath(); g.moveTo(30, cy - 10); g.bezierCurveTo(90, cy - 140, 300, cy - 150, 360, cy - 40); g.stroke();
+      g.lineWidth = 4; g.beginPath(); g.moveTo(60, cy + 70); g.bezierCurveTo(140, cy + 130, 270, cy + 120, 330, cy + 60); g.stroke();
+      for (let i = 0; i < 5; i++) { g.lineWidth = 6; g.beginPath(); g.moveTo(300 + i*12, cy - 70 + i*8); g.lineTo(340 + i*12, cy - 100 + i*10); g.stroke(); }
+      g.shadowBlur = 0; const gr = g.createRadialGradient(cx, cy + 10, 10, cx, cy + 10, 100); gr.addColorStop(0, '#0b1a3a'); gr.addColorStop(.6, '#2B6CFF'); gr.addColorStop(1, '#9fd8ff'); g.fillStyle = gr; g.beginPath(); g.ellipse(cx, cy + 10, 82, 104, 0, 0, 7); g.fill();
+      g.fillStyle = '#05070f'; g.beginPath(); g.ellipse(cx, cy + 14, 34, 46, 0, 0, 7); g.fill(); g.fillStyle = '#fff'; g.beginPath(); g.ellipse(cx - 30, cy - 34, 22, 28, -.4, 0, 7); g.fill(); g.beginPath(); g.arc(cx + 34, cy + 50, 9, 0, 7); g.fill();
+      g.strokeStyle = 'rgba(234,242,255,.6)'; g.lineWidth = 3; g.beginPath(); g.moveTo(80, cy - 150); g.quadraticCurveTo(190, cy - 210, 320, cy - 170); g.stroke(); }
+    else if (name === 'dragon') {                                                                // 金龙线稿：S 形身躯 + 鳞 + 爪 + 龙头
+      g.strokeStyle = '#FFC857'; g.lineCap = 'round'; glow('#FFB020', 16);
+      const P = t2 => [192 + 120*Math.sin(t2*Math.PI*2.2), 520 - t2*430]; g.lineWidth = 34; g.beginPath(); for (let i = 0; i <= 60; i++) { const [x, y] = P(i/60); i ? g.lineTo(x, y) : g.moveTo(x, y); } g.stroke();
+      g.strokeStyle = '#05050a'; g.lineWidth = 24; g.stroke(); g.strokeStyle = '#FFC857'; g.shadowBlur = 0; g.lineWidth = 2.5;
+      for (let i = 2; i < 58; i += 2) { const [x, y] = P(i/60), [x2, y2] = P((i + 1)/60), a = Math.atan2(y2 - y, x2 - x); g.beginPath(); g.arc(x, y, 10, a + .6, a + Math.PI - .6); g.stroke(); }
+      [.25, .55, .8].forEach(u => { const [x, y] = P(u); for (let k = -1; k <= 1; k++) { g.beginPath(); g.moveTo(x, y); g.lineTo(x + 34 + k*8, y + 18 + k*14); g.stroke(); } });
+      const [hx, hy] = P(1); glow('#FFB020', 16); g.lineWidth = 4; g.beginPath(); g.moveTo(hx - 40, hy + 30); g.quadraticCurveTo(hx - 10, hy - 20, hx + 50, hy - 10); g.lineTo(hx + 70, hy + 15); g.lineTo(hx + 30, hy + 30); g.closePath(); g.stroke();
+      g.beginPath(); g.moveTo(hx, hy - 10); g.quadraticCurveTo(hx - 20, hy - 60, hx - 60, hy - 70); g.moveTo(hx + 20, hy - 12); g.quadraticCurveTo(hx + 10, hy - 70, hx - 20, hy - 90); g.moveTo(hx + 60, hy + 10); g.bezierCurveTo(hx + 110, hy + 20, hx + 120, hy - 30, hx + 150, hy - 20); g.stroke();
+      g.fillStyle = '#FF2A3A'; g.beginPath(); g.arc(hx + 30, hy, 6, 0, 7); g.fill(); }
+    else {                                                                                       // 锦鲤：两尾绕圈 + 水纹
+      g.strokeStyle = 'rgba(43,240,255,.25)'; g.lineWidth = 2; for (let r = 40; r < 260; r += 36) { g.beginPath(); g.arc(192, 290, r, 0, 7); g.stroke(); }
+      const koi = (cx, cy, rot, white) => { g.save(); g.translate(cx, cy); g.rotate(rot); glow('#FF8A3A', 14);
+        g.fillStyle = white ? '#F6F1EA' : '#F26A2E'; g.beginPath(); g.ellipse(0, 0, 110, 42, 0, 0, 7); g.fill(); g.beginPath(); g.moveTo(-95, 0); g.lineTo(-170, -46); g.quadraticCurveTo(-150, 0, -170, 46); g.closePath(); g.fill();
+        g.shadowBlur = 0; g.fillStyle = white ? '#E2422A' : '#F6F1EA'; g.beginPath(); g.ellipse(-10, -8, 40, 22, .3, 0, 7); g.fill(); g.beginPath(); g.ellipse(55, 6, 22, 16, 0, 0, 7); g.fill();
+        g.fillStyle = '#0a0a0a'; g.beginPath(); g.arc(85, -12, 5, 0, 7); g.fill(); g.restore(); };
+      koi(150, 200, .5, false); koi(240, 400, Math.PI + .5, true); }
+    for (let i = 0; i < 500; i++) { g.fillStyle = `rgba(255,255,255,${(Math.random()*.05).toFixed(3)})`; g.fillRect(Math.random()*384, Math.random()*576, 2, 2); }
+    return c; }
   function drawGirl(k, t) {
+    if (posterStyle === 'silhouette' && k >= 2) {                                               // 前两块保留少女剪影，其余四块轮换题材库（每 30 秒换一个）
+      if (!subjBase[k] || t - subjT[k] > SUBJ_PERIOD + k*3) { subjName[k] = subjFor(); subjBase[k] = drawSubject(subjName[k]); subjT[k] = t; }
+      const { g, t: tex } = girls[k]; g.drawImage(subjBase[k], 0, 0);
+      if (Math.random() < .04) { const y = Math.random()*520, h = 10 + Math.random()*30; g.drawImage(subjBase[k], 0, y, 384, h, (Math.random() - .5)*30, y, 384, h); }
+      tex.needsUpdate = true; return; }
     if (posterStyle === 'silhouette') return drawSilhouette(k, t);
     const { g, t: tex } = girls[k]; if (!posterBase[k]) posterBase[k] = buildPoster(k); g.drawImage(posterBase[k], 0, 0);
     if (Math.random() < .03) { const y = Math.random()*520, h = 10 + Math.random()*30; g.drawImage(posterBase[k], 0, y, 384, h, (Math.random() - .5)*30, y, 384, h); }   // 偶发故障错位
@@ -1300,11 +1357,48 @@ const field = (() => {
       const gr = g.createLinearGradient(x, 0, x + W, 384); gr.addColorStop(0, col); gr.addColorStop(1, '#05070b'); g.fillStyle = gr; g.fillRect(x + 6, 6, W - 12, 372);
       g.font = `800 ${fitSize(g, txt, W - 60, 90)}px ${FONT}`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = '#EEF4FF'; g.fillText(txt, x + W/2, 192); }
     scan(g, 2048, 384); tex.needsUpdate = true; }
+  // 漂浮光点（散景）：几百颗慢慢上浮摇摆的光球，少数最亮的带十字星芒；颜色取城市配色 + 暖红橙
+  const BOK_N = 800, bokPos = new Float32Array(BOK_N*3), bokSeed = new Float32Array(BOK_N*4);
+  for (let i = 0; i < BOK_N; i++) { const a = Math.random()*Math.PI*2, r = 14 + Math.pow(Math.random(), .7)*90; bokPos.set([Math.cos(a)*r, 3 + Math.random()*70, Math.sin(a)*r], i*3); bokSeed.set([Math.random(), Math.random(), Math.random(), Math.random() < .07 ? 1 : 0], i*4); }
+  const bokGeo = new THREE.BufferGeometry(); bokGeo.setAttribute('position', new THREE.BufferAttribute(bokPos, 3)); bokGeo.setAttribute('aSeed', new THREE.BufferAttribute(bokSeed, 4));
+  const bokMat = new THREE.ShaderMaterial({ transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false,
+    uniforms: { uTime: { value: 0 }, uA: { value: new THREE.Color('#FF2BD6') }, uB: { value: new THREE.Color('#2BF0FF') }, uBoost: { value: 0 }, uScale: { value: 400 } },
+    vertexShader: `attribute vec4 aSeed; uniform float uTime,uBoost,uScale; varying vec4 vS; varying float vA;
+      void main(){ vS=aSeed; vec3 p=position; p.y=mod(p.y+uTime*(.6+aSeed.x*1.2)+uBoost*aSeed.y*6.0,74.0)+2.0; p.x+=sin(uTime*.3+aSeed.y*20.0)*1.5; p.z+=cos(uTime*.25+aSeed.z*20.0)*1.5;
+        vec4 mv=modelViewMatrix*vec4(p,1.0); float d=-mv.z; vA=1.3*smoothstep(2.0,10.0,mod(p.y,74.0))*(.6+.4*sin(uTime*(1.0+aSeed.z*2.0)+aSeed.x*30.0));
+        gl_PointSize=(aSeed.w>.5?5.0:1.8+aSeed.x*2.6)*uScale/d*(1.0+uBoost*.6); gl_Position=projectionMatrix*mv; }`,
+    fragmentShader: `uniform vec3 uA,uB; varying vec4 vS; varying float vA;
+      void main(){ vec2 q=gl_PointCoord-.5; float r=length(q); vec3 col=vS.y<.35?vec3(1.0,.32,.18):(vS.y<.55?vec3(1.0,.62,.25):(vS.y<.8?uB:uA));
+        float a=smoothstep(.5,.0,r)*.9; if(vS.w>.5){ a=exp(-r*r*90.0)*1.4+exp(-abs(q.x)*60.0)*exp(-abs(q.y)*5.0)*.9+exp(-abs(q.y)*60.0)*exp(-abs(q.x)*5.0)*.9; col=mix(col,vec3(1.0),.45); }   /* 星芒 */
+        if(a<.01) discard; gl_FragColor=vec4(col*a*vA,1.0); }` });
+  const bokeh = new THREE.Points(bokGeo, bokMat); bokeh.frustumCulled = false; scene.add(bokeh);
+  // 像素鱼全息：点阵组成的大鱼在楼群之间游动，尾巴摆动（点阵 = LED 全息感）
+  const fishPts = [], FS = .42;
+  for (let x = -16; x <= 16; x += FS) for (let y = -7; y <= 7; y += FS) { const u = (x + 16)/32;   // u:0 尾 → 1 头
+    const body = .17*Math.pow(Math.sin(Math.PI*Math.min(1, Math.max(0, (u - .14)/.86))), .8)*32, tail = u < .2 ? (.2 - u)/.2*7 : 0, dors = (u > .45 && u < .7 && y > 0) ? Math.sin((u - .45)/.25*Math.PI)*2.6 : 0;
+    if (Math.abs(y) < Math.max(body + dors, tail) && (u > .14 || Math.abs(y) > 1.2 + (1 - tail/7)*2)) fishPts.push(x, y, 0, Math.random()); }
+  const fishGeo = new THREE.BufferGeometry(), fp = new Float32Array(fishPts.length/4*3), fr2 = new Float32Array(fishPts.length/4);
+  for (let i = 0; i < fr2.length; i++) { fp[i*3] = fishPts[i*4]; fp[i*3 + 1] = fishPts[i*4 + 1]; fr2[i] = fishPts[i*4 + 3]; }
+  fishGeo.setAttribute('position', new THREE.BufferAttribute(fp, 3)); fishGeo.setAttribute('aR', new THREE.BufferAttribute(fr2, 1));
+  const fishMat = new THREE.ShaderMaterial({ transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false, uniforms: { uTime: { value: 0 }, uScale: { value: 400 } },
+    vertexShader: `attribute float aR; uniform float uTime,uScale; varying float vA;
+      void main(){ vec3 p=position; float u=(p.x+16.0)/32.0; p.z+=sin(uTime*2.2-u*4.0)*pow(1.0-u,1.6)*4.0; p.y+=sin(uTime*1.1)*.4;   /* 摆尾 */
+        vec4 mv=modelViewMatrix*vec4(p,1.0); vA=(.55+.45*step(.12,fract(aR*7.0+uTime*.8)))*smoothstep(30.0,52.0,-mv.z); gl_PointSize=1.3*uScale/-mv.z;   /* 离镜头太近就隐去 */ gl_Position=projectionMatrix*mv; }`,
+    fragmentShader: `varying float vA; void main(){ float r=length(gl_PointCoord-.5); if(r>.5) discard; gl_FragColor=vec4(vec3(.82,.93,1.0)*smoothstep(.5,.15,r)*vA*.95,1.0); }` });
+  const fish = new THREE.Points(fishGeo, fishMat); fish.frustumCulled = false; scene.add(fish); let fishPh = Math.random()*6.28;
+  function stepAtmos(t, dt) { bokMat.uniforms.uTime.value = t; bokMat.uniforms.uBoost.value = Math.max(0, bokMat.uniforms.uBoost.value - dt*.5); fishMat.uniforms.uTime.value = t;
+    fishPh += dt*.035; const R = 40, y = 22 + 3*Math.sin(t*.2); fish.position.set(Math.cos(fishPh)*R, y, Math.sin(fishPh)*R); fish.rotation.set(0, -fishPh - Math.PI/2, 0); }   /* 身体沿圆周切线、头朝前进方向，侧面朝向广场中心 */
+  // 加密街招：每座城的内圈楼低层挂 3 块英文霓虹横招（WE BUY NFTs FOR CASH / CONNECT WALLET / GM）
+  const CRYPTO_TXT = [['WE BUY NFTs', 'FOR CASH'], ['CONNECT', 'WALLET'], ['GM', 'WAGMI']], cryptoCv = CRYPTO_TXT.map(() => cnv(768, 288)), cryptoMats = cryptoCv.map(c => addMat(c.t));
+  function drawCrypto() { cryptoCv.forEach((cv, k) => { const { g, t } = cv, [a, b] = CRYPTO_TXT[k], col = ['#3DFF8B', '#2BF0FF', '#FFD23F'][k]; g.clearRect(0, 0, 768, 288);
+    g.save(); g.shadowColor = col; g.shadowBlur = 18; g.strokeStyle = col; g.lineWidth = 6; g.strokeRect(14, 14, 740, 260); g.restore();
+    neon(g, a, 384, 104, fitSize(g, a, 680, 100), col); neon(g, b, 384, 206, fitSize(g, b, 680, 72), '#EEF4FF', { tube: false, weight: 600 }); t.needsUpdate = true; }); }
   function layoutForms(host, avoid) {
     const C = traits.C, fr = mulberry32(fnv1a(traits.token + '#forms')), taken = new Set(host);
     const freeTop = b => Math.min(b.h - 2, b.occLow == null ? 1e9 : b.occLow - .8);                       // 可用楼层上限：正面大屏下沿以下
     const F = blds.filter(b => b.inner && b.h > 14 && !avoid.has(b)).sort(() => fr() - .5);              // 只挂内圈（镜头看得到）
     let slot = 0; boardsOn = 0; curveOn = false;
+    drawCrypto(); F.filter(b => freeTop(b) >= 9).slice(-3).forEach((b, k) => { ensureGrp(b); const W = Math.min(b.w*.9, 9), H = W*.375; signs.push(mountPlane(b, cryptoMats[k], W, H, 0, Math.min(freeTop(b) - H/2 - .5, 4 + H/2 + 1.5), b.d/2 + .32)); });   // 加密街招
     if (C.forms.includes('stack') || C.forms.includes('bands')) drawBoxes(mulberry32(fnv1a(traits.token + '#boxes')));
     if (C.forms.includes('stack')) F.forEach(b => {                                   // 东京：杂居楼袖招牌，每层一块竖向叠放、垂直挑出
       const sides = fr() < .6 ? [1, -1] : [fr() < .5 ? 1 : -1], W = 4.4, H = 2.5; ensureGrp(b);   // 两侧各一列，每层一块
@@ -1517,6 +1611,7 @@ const field = (() => {
     const tg = new THREE.BufferGeometry(); tg.setAttribute('position', new THREE.BufferAttribute(tp,3));
     const trail = new THREE.Line(tg, new THREE.LineBasicMaterial({ color, transparent: true, opacity: big ? .9 : .6, blending: THREE.AdditiveBlending, depthWrite: false }));
     scene.add(head, trail); comets.push({ big, color, from, to, apex, t: 0, dur: big ? 2.2 : 1.6, head, trail, tp });
+    if (big) bokMat.uniforms.uBoost.value = 1;   /* 大单：一阵光点上升 */
     if (kind === 'buy') flash.copy(COL.buy).multiplyScalar(big ? .9 : .35); else { flash.copy(COL.sell).multiplyScalar(big ? .6 : .25); glitch = big ? .7 : .35; }
     if (!progExternal) prog = Math.max(.12, Math.min(1, prog + (kind === 'buy' ? (amount ? amount/90000 : big ? .05 : .004) : -(amount ? amount/200000 : .002))));   /* 买入推高楼层，卖出小幅回落 */
     const coin = mainTok();
@@ -1552,7 +1647,7 @@ const field = (() => {
   dom.addEventListener('wheel', e => { camTargetDist = Math.max(14, Math.min(36, camTargetDist*(1 + Math.sign(e.deltaY)*.08))); }, { passive: true });
   // mount / unmount
   let ro = null;
-  function resize() { if (!stageEl) return; const w = stageEl.clientWidth, h = stageEl.clientHeight; if (!w || !h) return; renderer.setSize(w, h, false); camera.aspect = w/h; camera.updateProjectionMatrix(); resizeRT(); }
+  function resize() { if (!stageEl) return; const w = stageEl.clientWidth, h = stageEl.clientHeight; if (!w || !h) return; renderer.setSize(w, h, false); camera.aspect = w/h; camera.updateProjectionMatrix(); bokMat.uniforms.uScale.value = fishMat.uniforms.uScale.value = h*.9; resizeRT(); }
   function mount(stage, labels, chips, room) {
     unmount(); stageEl = stage; labelsEl = labels; chipsEl = chips; roomRef = room; stage.insertBefore(dom, stage.firstChild);
     info.city = room.city || null; info.name = room.name || `${room.host} 的直播間`; info.title = room.title || ''; info.tokens = (room.tokens || [room.coin]).map(x => String(x).toUpperCase()); tokIdx = 0; annQ.length = 0; annUntil = -1; camFocus = -1; whip = null; lastWhip = -1e9; prog = progShown = .2 + .1*Math.min(1, Math.log10(room.n + 1)/4);
@@ -1600,7 +1695,7 @@ const field = (() => {
       // 城市：屏幕刷新 / 跑马灯滚动 / 闪光衰减 / 障碍灯
       signT -= dt; if (signT <= 0) { drawCoinSign(); drawKScreen(); signT = .5; }
       tokT += dt; if (tokT > 6) { tokT = 0; tokIdx++; drawCoinSign(); }   /* 购物车 token 每 6 秒轮换 */
-      stepSquiggleRig(t); stepNames(dt); progShown += (prog - progShown)*Math.min(1, dt*1.5); progMat.uniforms.uP.value = progShown; progMat.uniforms.uTime.value = t;
+      stepSquiggleRig(t); stepAtmos(t, dt); stepNames(dt); progShown += (prog - progShown)*Math.min(1, dt*1.5); progMat.uniforms.uP.value = progShown; progMat.uniforms.uTime.value = t;
       spkT -= dt; if (spkT <= 0) { if (curveOn) drawCurve(t); for (let k = 0; k < boardsOn; k++) drawBoard(k, t); drawSpkScreen(); for (let k = 0; k < 6; k++) drawGirl(k, t); spkT = .15; }
       artT -= dt; if (artT <= 0 && traits) { drawArtCanvas(newHash()); flash.setRGB(.25, .25, .3); artT = ART_PERIOD; }   /* 巨幕每 45 秒换一幅新作 */
       punkT -= dt; if (punkT <= 0 && punks.length) { punks[(Math.random()*4)|0] = hashPunk(); drawPunks(); punkT = 4; }   /* 每 4 秒换一张头像 */
