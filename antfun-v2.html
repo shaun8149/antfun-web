@@ -858,7 +858,9 @@ const field = (() => {
   // 屏幕材质 = LED 点阵：每 4 个贴图像素一颗圆点，点间黑缝；近看是像素点，远看是图像（亮度补偿点阵损失）
   const scrMat = (t) => { const m = new THREE.MeshBasicMaterial({ map: t, fog: false });
     m.onBeforeCompile = sh => { sh.fragmentShader = sh.fragmentShader.replace('#include <map_fragment>', `#include <map_fragment>
-      { vec2 ts = vec2(textureSize(map, 0))/4.0, gq = fract(vUv*ts) - .5; float dd = length(gq); diffuseColor.rgb *= (smoothstep(.5, .28, dd)*1.75 + .04); }`); };
+      { vec2 ts = vec2(textureSize(map, 0))/4.0, cuv = vUv*ts, gq = fract(cuv) - .5; float dd = length(gq), dot = smoothstep(.5, .28, dd)*1.75 + .04;
+        float px = max(fwidth(cuv.x), fwidth(cuv.y)), near = 1.0 - smoothstep(.22, .42, px);   /* 一颗点在屏幕上 <~3 像素时淡出点阵，防摩尔纹 */
+        diffuseColor.rgb *= mix(.9, dot, near); }`); };
     m.customProgramCacheKey = () => 'led'; return m; };
   function mountPlane(b, mat, pw, ph, x, y, z = b.d/2 + .2) { const m = new THREE.Mesh(new THREE.PlaneGeometry(pw, ph), mat); m.position.set(x, y, z); b.grp.add(m); if (z > 0) b.occLow = Math.min(b.occLow == null ? 1e9 : b.occLow, y - ph/2); return m; }   /* occLow：正面被占用的最低高度，城市招牌只用它下方的楼层 */
   const signs = [], screens = [];
@@ -1202,7 +1204,7 @@ const field = (() => {
     g.lineJoin = 'round'; g.lineWidth = 9; g.strokeStyle = P.rope; path(); g.stroke();
     const hi = (r()*pegs.length)|0; pegs.forEach((p, i) => { g.fillStyle = i === hi ? P.hi : P.peg; g.beginPath(); g.arc(p.x, p.y, ring.includes(p) ? Math.max(5, p.r*.35) : 5, 0, 7); g.fill(); });   // 单钉高亮
     for (let i = 0; i < 7000; i++) { g.fillStyle = P.bg === '#0E0E10' ? `rgba(255,255,255,${(r()*.035).toFixed(3)})` : `rgba(40,30,20,${(r()*.05).toFixed(3)})`; g.fillRect(r()*W, r()*H, 1.2, 1.2); }
-    g.fillStyle = 'rgba(0,0,0,.07)'; for (let y = 0; y < H; y += 3) g.fillRect(0, y, W, 1); t.needsUpdate = true;
+    t.needsUpdate = true;   /* 艺术巨幕不叠扫描线（远看会出摩尔纹） */
   }
   function drawUkiyoe(r) {                                                          // 浮世绘：米纸 + 天空晕染 + 红日 + 富士 + 卷浪与浪尖浪花 + 套色错位 + 题签与朱印（构图随币变化）
     const { g, t } = flowScr, W = 640, H = 800, AI = '#1F3A6B', AI2 = '#5F82AE', SUMI = '#1B2433', CREAM = '#EFE3C8', SHU = '#C9432C', FOAM = '#F7F1E4';
@@ -1229,7 +1231,7 @@ const field = (() => {
     g.fillStyle = SUMI; g.font = `700 28px "Noto Sans JP",serif`; g.textAlign = 'center'; g.textBaseline = 'middle'; [...title].forEach((ch, i) => g.fillText(ch, tx, 70 + i*34));
     g.fillStyle = SHU; g.fillRect(tx - 16, 60 + [...title].length*34, 32, 32); g.fillStyle = CREAM; g.font = `700 18px "Noto Sans JP",serif`; g.fillText('印', tx, 76 + [...title].length*34);   // 朱印
     for (let i = 0; i < 9000; i++) { g.fillStyle = `rgba(80,60,30,${(r()*.06).toFixed(3)})`; g.fillRect(r()*W, r()*H, 1.3, 1.3); }   // 和纸纤维
-    g.fillStyle = 'rgba(0,0,0,.07)'; for (let y = 0; y < H; y += 3) g.fillRect(0, y, W, 1); t.needsUpdate = true;
+    t.needsUpdate = true;   /* 艺术巨幕不叠扫描线（远看会出摩尔纹） */
   }
   // 上海：巨幅 Squiggle 风格动画（向 Snowfro《Chromie Squiggle》致敬；自写代码，原作非公开授权）—— 点串彩虹波浪线，起伏由币名决定，色相持续流动
   const sqScr = cnv(1200, 800), sqMat = scrMat(sqScr.t); let sq = null;
@@ -1297,7 +1299,7 @@ const field = (() => {
       if (wd > 10 && r() < .35) { g.strokeStyle = 'rgba(27,23,18,.55)'; g.lineWidth = 1.2; for (let i = 6; i < pts.length - 1; i += 6) { const [a, b] = pts[i], [c, d] = pts[i + 1], ang = Math.atan2(d - b, c - a) + Math.PI/2; g.beginPath(); g.moveTo(a - Math.cos(ang)*wd/2, b - Math.sin(ang)*wd/2); g.lineTo(a + Math.cos(ang)*wd/2, b + Math.sin(ang)*wd/2); g.stroke(); } }   /* 分节色带 */
     }
     for (let i = 0; i < 9000; i++) { g.fillStyle = `rgba(40,30,20,${(r()*.06).toFixed(3)})`; g.fillRect(r()*W, r()*H, 1.2, 1.2); }   /* 纸纹 */
-    g.fillStyle = 'rgba(0,0,0,.08)'; for (let y = 0; y < H; y += 3) g.fillRect(0, y, W, 1); t.needsUpdate = true;
+    t.needsUpdate = true;   /* 艺术巨幕不叠扫描线（远看会出摩尔纹） */
   }
   function redrawStatic() { drawVSign(); drawAds(); drawTicker(); }
   // 11) 上麦点名：一块「名字塔」大竖牌 + 3 块中继竖牌。新上麦 → 约 2.5s 后灯管通电式闪烁亮起名字，中继牌依次接力；约 9s 后回到「发言中」常态
